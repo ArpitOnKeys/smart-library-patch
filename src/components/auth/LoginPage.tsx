@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +8,7 @@ import { auth, initializeAdmin } from '@/lib/database';
 import { Eye, EyeOff, BookOpen } from 'lucide-react';
 
 interface LoginPageProps {
-  onLogin: () => void;
+  onLogin: (success: boolean) => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
@@ -46,7 +45,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
           title: "Login Successful",
           description: "Welcome to PATCH - The Smart Library",
         });
-        onLogin();
+        onLogin(true);
       } else {
         toast({
           title: "Login Failed",
