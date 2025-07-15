@@ -4,6 +4,7 @@ import { auth, initializeAdmin } from '@/lib/database';
 import { LoginPage } from '@/components/auth/LoginPage';
 import { StudentPanel } from '@/components/student/StudentPanel';
 import { DueFeesPanel } from '@/components/fees/DueFeesPanel';
+import { IncomeExpensePanel } from '@/components/income/IncomeExpensePanel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -29,9 +30,9 @@ const Index = () => {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-4xl">
-        <div className="space-y-8">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+      <div className="bg-white rounded-lg shadow-md w-full max-w-7xl">
+        <div className="space-y-8 p-8">
           <div className="text-center">
             <h1 className="text-4xl font-bold text-primary mb-2">
               📚 PATCH - THE SMART LIBRARY
@@ -57,12 +58,7 @@ const Index = () => {
             </TabsContent>
             
             <TabsContent value="income">
-              <div className="text-center py-12">
-                <h3 className="text-xl font-semibold text-muted-foreground">
-                  💰 Income & Expense Panel
-                </h3>
-                <p className="text-muted-foreground mt-2">Coming soon...</p>
-              </div>
+              <IncomeExpensePanel />
             </TabsContent>
           </Tabs>
 
