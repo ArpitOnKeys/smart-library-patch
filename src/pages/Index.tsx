@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { auth, initializeAdmin } from '@/lib/database';
 import { LoginPage } from '@/components/auth/LoginPage';
@@ -70,10 +71,8 @@ const Index = () => {
           </div>
         </div>
       </div>
-    );
-  }
-
-  return <LoginPage onLogin={handleLogin} />;
+    </div>
+  );
 };
 
 export default Index;
