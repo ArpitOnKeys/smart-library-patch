@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Download, Upload, Trash2, Key, Database, FileText } from 'lucide-react';
 import { auth, storage } from '@/lib/database';
 import { exportAllData, importAllData, clearAllData } from '@/utils/backup';
+import { Admin } from '@/types/database';
 
 export const SettingsPage = () => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -42,7 +43,7 @@ export const SettingsPage = () => {
     }
 
     // Verify current password
-    const admin = storage.getSingle('patch_admin');
+    const admin = storage.getSingle<Admin>('patch_admin');
     if (!admin || atob(admin.passwordHash) !== currentPassword) {
       toast({
         title: "Authentication Failed",
@@ -53,7 +54,7 @@ export const SettingsPage = () => {
     }
 
     // Update credentials
-    const updatedAdmin = {
+    const updatedAdmin: Admin = {
       ...admin,
       username: newUsername,
       passwordHash: btoa(newPassword),
