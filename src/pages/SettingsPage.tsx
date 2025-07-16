@@ -56,7 +56,7 @@ const SettingsPage = () => {
       }
 
       // Verify current password
-      if (btoa(currentPassword) !== admin.passwordHash) {
+      if (atob(admin.passwordHash) !== currentPassword) {
         toast({
           title: "Error",
           description: "Current password is incorrect",

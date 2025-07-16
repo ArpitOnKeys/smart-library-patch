@@ -7,7 +7,7 @@ export const generateId = () => {
 };
 
 // Local storage keys
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   STUDENTS: 'patch_students',
   FEE_PAYMENTS: 'patch_fee_payments',
   EXPENSES: 'patch_expenses',

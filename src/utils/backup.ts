@@ -1,4 +1,3 @@
-
 import { storage } from '@/lib/database';
 
 export interface BackupData {
@@ -11,7 +10,7 @@ export interface BackupData {
   admin: any;
 }
 
-export const exportAllData = (): void => {
+export const exportData = (): void => {
   const backupData: BackupData = {
     version: '1.0.0',
     timestamp: new Date().toISOString(),
@@ -33,6 +32,46 @@ export const exportAllData = (): void => {
   URL.revokeObjectURL(link.href);
 };
 
+export const importData = (file: File): Promise<void> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const result = e.target?.result;
+        if (typeof result !== 'string') {
+          throw new Error('Failed to read file');
+        }
+        
+        const data: BackupData = JSON.parse(result);
+        
+        // Validate backup structure
+        if (!data.version || !data.students || !data.feePayments || !data.expenses) {
+          throw new Error('Invalid backup file structure');
+        }
+
+        // Import all data
+        storage.set('patch_students', data.students || []);
+        storage.set('patch_fee_payments', data.feePayments || []);
+        storage.set('patch_expenses', data.expenses || []);
+        storage.set('patch_whatsapp_logs', data.whatsappLogs || []);
+        
+        if (data.admin) {
+          storage.setSingle('patch_admin', data.admin);
+        }
+        
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsText(file);
+  });
+};
+
+export const exportAllData = exportData;
 export const importAllData = (data: BackupData): void => {
   // Validate backup structure
   if (!data.version || !data.students || !data.feePayments || !data.expenses) {
