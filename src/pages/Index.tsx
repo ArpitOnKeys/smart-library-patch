@@ -7,9 +7,12 @@ import { DueFeesPanel } from '@/components/fees/DueFeesPanel';
 import { IncomeExpensePanel } from '@/components/income/IncomeExpensePanel';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(auth.isAuthenticated());
+  const navigate = useNavigate();
 
   useEffect(() => {
     initializeAdmin();
@@ -62,8 +65,18 @@ const Index = () => {
             </TabsContent>
           </Tabs>
 
-          <div className="text-center">
-            <Button variant="destructive" onClick={handleLogout}>Logout</Button>
+          <div className="flex justify-center gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/settings')}
+              className="flex items-center gap-2"
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Button>
+            <Button variant="destructive" onClick={handleLogout}>
+              Logout
+            </Button>
           </div>
         </div>
       </div>
