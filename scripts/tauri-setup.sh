@@ -32,7 +32,7 @@ npm install
 # Initialize Tauri (if not already initialized)
 if [ ! -d "src-tauri" ]; then
     echo "🔧 Initializing Tauri..."
-    cargo tauri init --app-name "PATCH - THE SMART LIBRARY" --window-title "PATCH - THE SMART LIBRARY" --dist-dir "../dist" --dev-path "http://localhost:5173"
+    cargo tauri init --app-name "PATCH - THE SMART LIBRARY" --window-title "PATCH - THE SMART LIBRARY" --dist-dir "../dist" --dev-path "http://localhost:8080"
     
     # Copy our custom config
     cp tauri-config/tauri.conf.json src-tauri/tauri.conf.json
