@@ -25,8 +25,8 @@ echo "✅ Node.js version: $(node --version)"
 echo "📦 Installing Tauri CLI..."
 cargo install tauri-cli
 
-# Install npm dependencies
-echo "📦 Installing npm dependencies..."
+# Install npm dependencies (assuming they're already installed)
+echo "📦 Checking npm dependencies..."
 npm install
 
 # Initialize Tauri (if not already initialized)
