@@ -164,7 +164,8 @@ export const initializeAdmin = () => {
       id: generateId(),
       username: 'admin',
       passwordHash: btoa('admin123'), // Simple base64 encoding for demo
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     storage.setSingle(STORAGE_KEYS.ADMIN, defaultAdmin);
     console.log('Default admin created - Username: admin, Password: admin123');

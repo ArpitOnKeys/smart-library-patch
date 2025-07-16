@@ -48,4 +48,5 @@ export interface Admin {
   username: string;
   passwordHash: string;
   createdAt: string;
+  updatedAt: string;
 }
