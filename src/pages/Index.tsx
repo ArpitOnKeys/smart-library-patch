@@ -5,14 +5,13 @@ import { LoginPage } from '@/components/auth/LoginPage';
 import { StudentPanel } from '@/components/student/StudentPanel';
 import { DueFeesPanel } from '@/components/fees/DueFeesPanel';
 import { IncomeExpensePanel } from '@/components/income/IncomeExpensePanel';
-import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Settings } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppLayout } from '@/components/layout/AppLayout';
+import { Users, Clock, TrendingUp, BookOpen, Sparkles } from 'lucide-react';
 
 const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(auth.isAuthenticated());
-  const navigate = useNavigate();
 
   useEffect(() => {
     initializeAdmin();
@@ -23,64 +22,93 @@ const Index = () => {
     setIsAuthenticated(success);
   };
 
-  const handleLogout = () => {
-    auth.logout();
-    setIsAuthenticated(false);
-  };
-
   if (!isAuthenticated) {
     return <LoginPage onLogin={handleLogin} />;
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-      <div className="bg-white rounded-lg shadow-md w-full max-w-7xl">
-        <div className="space-y-8 p-8">
-          <div className="text-center">
-            <h1 className="text-4xl font-bold text-primary mb-2">
-              📚 PATCH - THE SMART LIBRARY
-            </h1>
-            <p className="text-muted-foreground text-lg">
-              Complete Library Management System
-            </p>
+    <AppLayout>
+      <div className="space-y-8 animate-fade-in">
+        {/* Welcome Header */}
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center space-x-3">
+            <div className="brand-gradient p-3 rounded-2xl shadow-lg">
+              <BookOpen className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                PATCH DASHBOARD
+              </h1>
+              <p className="text-muted-foreground text-lg font-medium">
+                Complete Library Management System
+              </p>
+            </div>
           </div>
-
-          <Tabs defaultValue="students" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="students">🧑‍🎓 Student Panel</TabsTrigger>
-              <TabsTrigger value="dues">⏳ Due Fees Panel</TabsTrigger>
-              <TabsTrigger value="income">💰 Income & Expense</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="students">
-              <StudentPanel />
-            </TabsContent>
-            
-            <TabsContent value="dues">
-              <DueFeesPanel />
-            </TabsContent>
-            
-            <TabsContent value="income">
-              <IncomeExpensePanel />
-            </TabsContent>
-          </Tabs>
-
-          <div className="flex justify-center gap-4">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/settings')}
-              className="flex items-center gap-2"
-            >
-              <Settings className="h-4 w-4" />
-              Settings
-            </Button>
-            <Button variant="destructive" onClick={handleLogout}>
-              Logout
-            </Button>
+          
+          <div className="flex items-center justify-center space-x-2 text-sm">
+            <Sparkles className="h-4 w-4 text-yellow-500" />
+            <span className="text-muted-foreground">Welcome back, Admin! Ready to manage your library?</span>
+            <Sparkles className="h-4 w-4 text-yellow-500" />
           </div>
         </div>
+
+        {/* Main Content */}
+        <Card className="card-enhanced border-0">
+          <CardContent className="p-0">
+            <Tabs defaultValue="students" className="w-full">
+              <div className="border-b bg-muted/30">
+                <TabsList className="grid w-full grid-cols-3 bg-transparent h-auto p-4 gap-2">
+                  <TabsTrigger 
+                    value="students" 
+                    className="flex items-center gap-3 h-12 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-md button-enhanced"
+                  >
+                    <Users className="h-5 w-5" />
+                    <div className="text-left hidden sm:block">
+                      <div className="font-medium">Student Panel</div>
+                      <div className="text-xs text-muted-foreground">Manage Students</div>
+                    </div>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="dues" 
+                    className="flex items-center gap-3 h-12 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-md button-enhanced"
+                  >
+                    <Clock className="h-5 w-5" />
+                    <div className="text-left hidden sm:block">
+                      <div className="font-medium">Due Fees Panel</div>
+                      <div className="text-xs text-muted-foreground">Track Payments</div>
+                    </div>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="income" 
+                    className="flex items-center gap-3 h-12 rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-md button-enhanced"
+                  >
+                    <TrendingUp className="h-5 w-5" />
+                    <div className="text-left hidden sm:block">
+                      <div className="font-medium">Income & Expense</div>
+                      <div className="text-xs text-muted-foreground">Financial Overview</div>
+                    </div>
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              
+              <div className="p-6">
+                <TabsContent value="students" className="mt-0">
+                  <StudentPanel />
+                </TabsContent>
+                
+                <TabsContent value="dues" className="mt-0">
+                  <DueFeesPanel />
+                </TabsContent>
+                
+                <TabsContent value="income" className="mt-0">
+                  <IncomeExpensePanel />
+                </TabsContent>
+              </div>
+            </Tabs>
+          </CardContent>
+        </Card>
       </div>
-    </div>
+    </AppLayout>
   );
 };
 
