@@ -1,4 +1,3 @@
-
 import { Student, FeePayment, Expense, WhatsAppLog, Admin } from '@/types/database';
 
 // Utility to generate unique IDs
@@ -16,44 +15,71 @@ export const STORAGE_KEYS = {
   CURRENT_USER: 'patch_current_user'
 };
 
-// Generic storage utilities
-export const storage = {
-  get: <T>(key: string): T[] => {
+// Tauri-aware storage implementation
+class TauriAwareStorage {
+  private isTauri = typeof window !== 'undefined' && '__TAURI__' in window;
+
+  get<T>(key: string): T[] {
     try {
       const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : [];
     } catch (error) {
-      console.error(`Error reading from storage key ${key}:`, error);
+      console.error(`Error reading from storage (${key}):`, error);
       return [];
     }
-  },
-  
-  set: <T>(key: string, data: T[]): void => {
+  }
+
+  set<T>(key: string, data: T[]): void {
     try {
       localStorage.setItem(key, JSON.stringify(data));
+      if (this.isTauri) {
+        // In Tauri, we could also save to file system for backup
+        console.log(`Data saved to localStorage: ${key}`);
+      }
     } catch (error) {
-      console.error(`Error writing to storage key ${key}:`, error);
+      console.error(`Error writing to storage (${key}):`, error);
     }
-  },
-  
-  getSingle: <T>(key: string): T | null => {
+  }
+
+  getSingle<T>(key: string): T | null {
     try {
       const data = localStorage.getItem(key);
       return data ? JSON.parse(data) : null;
     } catch (error) {
-      console.error(`Error reading single item from storage key ${key}:`, error);
+      console.error(`Error reading single item from storage (${key}):`, error);
       return null;
     }
-  },
-  
-  setSingle: <T>(key: string, data: T): void => {
+  }
+
+  setSingle<T>(key: string, data: T): void {
     try {
       localStorage.setItem(key, JSON.stringify(data));
+      if (this.isTauri) {
+        console.log(`Single item saved to localStorage: ${key}`);
+      }
     } catch (error) {
-      console.error(`Error writing single item to storage key ${key}:`, error);
+      console.error(`Error writing single item to storage (${key}):`, error);
     }
   }
-};
+
+  remove(key: string): void {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      console.error(`Error removing from storage (${key}):`, error);
+    }
+  }
+
+  clear(): void {
+    try {
+      localStorage.clear();
+    } catch (error) {
+      console.error('Error clearing storage:', error);
+    }
+  }
+}
+
+export const storage = new TauriAwareStorage();
 
 // Database operations for Students
 export const studentDb = {
