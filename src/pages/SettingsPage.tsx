@@ -19,6 +19,10 @@ const SettingsPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Security question state
+  const [securityQuestion, setSecurityQuestion] = useState(auth.getSecurityQuestion());
+  const [securityAnswer, setSecurityAnswer] = useState('');
+
   const handlePasswordChange = async () => {
     if (!currentPassword || !newUsername || !newPassword || !confirmPassword) {
       toast({
@@ -158,6 +162,41 @@ const SettingsPage = () => {
     }
   };
 
+  const handleUpdateSecurityQuestion = () => {
+    if (!securityQuestion.trim() || !securityAnswer.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide both security question and answer",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const admin = storage.getSingle<Admin>(STORAGE_KEYS.ADMIN);
+      if (admin) {
+        const updatedAdmin: Admin = {
+          ...admin,
+          securityQuestion: securityQuestion.trim(),
+          securityAnswerHash: btoa(securityAnswer.toLowerCase().trim() + 'patch_salt_2024'),
+          updatedAt: new Date().toISOString()
+        };
+        storage.setSingle(STORAGE_KEYS.ADMIN, updatedAdmin);
+        setSecurityAnswer('');
+        toast({
+          title: "Success! 🔐",
+          description: "Security question updated successfully",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update security question",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
@@ -260,37 +299,84 @@ const SettingsPage = () => {
                 </div>
                 <div>
                   <CardTitle>Security</CardTitle>
-                  <CardDescription>Data management and security options</CardDescription>
+                  <CardDescription>Security question and data management</CardDescription>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" className="w-full rounded-xl button-enhanced">
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Clear All Data
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="rounded-2xl">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>⚠️ Clear All Data</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently delete all students, fees, expenses, and logs. 
-                      This action cannot be undone. Are you sure?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={handleClearAllData}
-                      className="rounded-xl bg-destructive hover:bg-destructive/90"
-                    >
-                      Yes, Clear All Data
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+            <CardContent className="space-y-6">
+              {/* Security Question Section */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="security-question">Security Question</Label>
+                  <Input
+                    id="security-question"
+                    value={securityQuestion}
+                    onChange={(e) => setSecurityQuestion(e.target.value)}
+                    placeholder="e.g., What is your favorite book?"
+                    className="rounded-xl"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="security-answer">Security Answer</Label>
+                  <Input
+                    id="security-answer"
+                    type="password"
+                    value={securityAnswer}
+                    onChange={(e) => setSecurityAnswer(e.target.value)}
+                    placeholder="Enter your answer"
+                    className="rounded-xl"
+                  />
+                </div>
+                
+                <Button 
+                  onClick={handleUpdateSecurityQuestion}
+                  variant="outline" 
+                  className="w-full rounded-xl button-enhanced"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Update Security Question
+                </Button>
+                
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    💡 Your security question will be used for password recovery if you forget your credentials.
+                  </p>
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t pt-4">
+                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-4">Danger Zone</h4>
+                
+                {/* Clear Data Section */}
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full rounded-xl button-enhanced">
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear All Data
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent className="rounded-2xl">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>⚠️ Clear All Data</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently delete all students, fees, expenses, and logs. 
+                        This action cannot be undone. Are you sure?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handleClearAllData}
+                        className="rounded-xl bg-destructive hover:bg-destructive/90"
+                      >
+                        Yes, Clear All Data
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </CardContent>
           </Card>
 
