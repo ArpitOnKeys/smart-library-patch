@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
-import { storage, studentDb, feePaymentDb, expenseDb } from '@/lib/database';
+import { storage, studentDb, feePaymentDb, expenseDb, auth } from '@/lib/database';
 
 interface AppSettings {
   defaultMonthlyFee: number;
@@ -59,6 +59,13 @@ export const AdminPanel = () => {
     totalData: 0,
     lastBackup: '2024-01-20 14:30:00'
   });
+
+  // Security settings state
+  const [securityQuestion, setSecurityQuestion] = useState(auth.getSecurityQuestion());
+  const [securityAnswer, setSecurityAnswer] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
@@ -201,6 +208,90 @@ export const AdminPanel = () => {
       title: "Reset Complete",
       description: "Settings have been reset to defaults"
     });
+  };
+
+  const handleUpdatePassword = () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill all password fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error", 
+        description: "New passwords don't match",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Verify current password
+    const currentUser = auth.getCurrentUser() as { username?: string; loginTime?: string } | null;
+    if (!auth.login(currentUser?.username || 'admin', currentPassword)) {
+      toast({
+        title: "Error",
+        description: "Current password is incorrect",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Update password
+    const success = auth.resetCredentials(currentUser?.username || 'admin', newPassword);
+    if (success) {
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      toast({
+        title: "Success",
+        description: "Password updated successfully"
+      });
+    } else {
+      toast({
+        title: "Error", 
+        description: "Failed to update password",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateSecurityQuestion = () => {
+    if (!securityQuestion.trim() || !securityAnswer.trim()) {
+      toast({
+        title: "Error",
+        description: "Please provide both security question and answer",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const admin = storage.getSingle('patch_admin') as any;
+      if (admin) {
+        const updatedAdmin = {
+          ...admin,
+          securityQuestion: securityQuestion.trim(),
+          securityAnswerHash: btoa(securityAnswer.toLowerCase().trim() + 'patch_salt_2024'),
+          updatedAt: new Date().toISOString()
+        };
+        storage.setSingle('patch_admin', updatedAdmin);
+        setSecurityAnswer('');
+        toast({
+          title: "Success",
+          description: "Security question updated successfully"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update security question",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -537,44 +628,113 @@ export const AdminPanel = () => {
         </TabsContent>
 
         <TabsContent value="security" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Change Password
+                </CardTitle>
+                <CardDescription>
+                  Update your admin password for enhanced security
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <Input 
+                    type="password" 
+                    placeholder="Current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                  <Input 
+                    type="password" 
+                    placeholder="New password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                  <Input 
+                    type="password" 
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                  <Button onClick={handleUpdatePassword} className="w-full">
+                    <Lock className="h-4 w-4 mr-2" />
+                    Update Password
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Security Question
+                </CardTitle>
+                <CardDescription>
+                  Manage your security question for password recovery
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="securityQuestion">Security Question</Label>
+                    <Input
+                      id="securityQuestion"
+                      placeholder="e.g., What is your favorite book?"
+                      value={securityQuestion}
+                      onChange={(e) => setSecurityQuestion(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="securityAnswer">Security Answer</Label>
+                    <Input
+                      id="securityAnswer"
+                      type="password"
+                      placeholder="Enter your answer"
+                      value={securityAnswer}
+                      onChange={(e) => setSecurityAnswer(e.target.value)}
+                    />
+                  </div>
+                  <Button onClick={handleUpdateSecurityQuestion} className="w-full">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Update Security Question
+                  </Button>
+                </div>
+                
+                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    💡 Your security question will be used to recover your password if you forget it.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           <Card className="glass-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Security Settings
+                <Database className="h-5 w-5" />
+                Session & Privacy
               </CardTitle>
               <CardDescription>
-                Manage account security and permissions
+                Manage active sessions and data privacy settings
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 border rounded-lg">
                   <div className="flex items-center justify-between mb-2">
-                    <Label className="text-base font-medium">Change Password</Label>
-                    <Lock className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Update your admin password for enhanced security
-                  </p>
-                  <div className="space-y-3">
-                    <Input type="password" placeholder="Current password" />
-                    <Input type="password" placeholder="New password" />
-                    <Input type="password" placeholder="Confirm new password" />
-                    <Button size="sm">Update Password</Button>
-                  </div>
-                </div>
-
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-base font-medium">Session Management</Label>
+                    <Label className="text-base font-medium">Current Session</Label>
                     <Badge variant="outline">Active</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Current session started: {new Date().toLocaleString()}
+                    Session started: {new Date().toLocaleString()}
                   </p>
-                  <Button variant="outline" size="sm">
-                    End All Sessions
+                  <Button variant="outline" size="sm" onClick={() => auth.logout()}>
+                    End Session
                   </Button>
                 </div>
 
@@ -584,7 +744,7 @@ export const AdminPanel = () => {
                     <Badge variant="secondary">Protected</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    All sensitive data is stored locally and encrypted. No data is shared with third parties.
+                    All data is stored locally and encrypted. No external sharing.
                   </p>
                 </div>
               </div>
