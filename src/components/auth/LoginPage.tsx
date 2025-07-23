@@ -6,8 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { auth, initializeAdmin } from '@/lib/database';
-import { Eye, EyeOff, BookOpen, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, BookOpen, Sparkles, KeyRound } from 'lucide-react';
 import { BrandFooter } from '@/components/layout/BrandFooter';
+import { ForgotPasswordModal } from './ForgotPasswordModal';
 
 interface LoginPageProps {
   onLogin: (success: boolean) => void;
@@ -18,6 +19,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   React.useEffect(() => {
     initializeAdmin();
@@ -153,6 +155,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     "Sign In to PATCH"
                   )}
                 </Button>
+
+                <div className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowForgotPassword(true)}
+                    disabled={isLoading}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors h-auto p-2"
+                  >
+                    <KeyRound className="h-4 w-4 mr-1" />
+                    Forgot Password?
+                  </Button>
+                </div>
               </form>
               
               <div className="mt-6 p-4 bg-muted/50 rounded-xl border">
@@ -168,6 +184,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       </div>
       
       <BrandFooter />
+
+      <ForgotPasswordModal
+        open={showForgotPassword}
+        onOpenChange={setShowForgotPassword}
+        onSuccess={() => {
+          toast({
+            title: "Ready to Login! 🔐",
+            description: "Use your new credentials to sign in",
+          });
+        }}
+      />
     </div>
   );
 };

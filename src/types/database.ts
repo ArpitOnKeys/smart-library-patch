@@ -47,6 +47,8 @@ export interface Admin {
   id: string;
   username: string;
   passwordHash: string;
+  securityQuestion: string;
+  securityAnswerHash: string;
   createdAt: string;
   updatedAt: string;
 }

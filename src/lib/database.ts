@@ -181,6 +181,19 @@ export const expenseDb = {
   }
 };
 
+// Simple encryption helper
+const encrypt = (text: string): string => {
+  return btoa(text + 'patch_salt_2024');
+};
+
+const decrypt = (hash: string): string => {
+  try {
+    return atob(hash).replace('patch_salt_2024', '');
+  } catch {
+    return '';
+  }
+};
+
 // Initialize default admin user
 export const initializeAdmin = () => {
   const existingAdmin = storage.getSingle<Admin>(STORAGE_KEYS.ADMIN);
@@ -189,12 +202,16 @@ export const initializeAdmin = () => {
     const defaultAdmin: Admin = {
       id: generateId(),
       username: 'admin',
-      passwordHash: btoa('admin123'), // Simple base64 encoding for demo
+      passwordHash: encrypt('admin123'),
+      securityQuestion: 'What is your favorite book?',
+      securityAnswerHash: encrypt('the alchemist'),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     storage.setSingle(STORAGE_KEYS.ADMIN, defaultAdmin);
     console.log('Default admin created - Username: admin, Password: admin123');
+    console.log('Security Question: What is your favorite book?');
+    console.log('Security Answer: the alchemist');
   }
 };
 
@@ -204,7 +221,7 @@ export const auth = {
     const admin = storage.getSingle<Admin>(STORAGE_KEYS.ADMIN);
     if (!admin) return false;
     
-    const isValid = admin.username === username && atob(admin.passwordHash) === password;
+    const isValid = admin.username === username && decrypt(admin.passwordHash) === password;
     
     if (isValid) {
       storage.setSingle(STORAGE_KEYS.CURRENT_USER, { username, loginTime: new Date().toISOString() });
@@ -223,5 +240,43 @@ export const auth = {
   
   getCurrentUser: () => {
     return storage.getSingle(STORAGE_KEYS.CURRENT_USER);
+  },
+
+  // Forgot Password utilities
+  getSecurityQuestion: (): string => {
+    const admin = storage.getSingle<Admin>(STORAGE_KEYS.ADMIN);
+    return admin?.securityQuestion || '';
+  },
+
+  verifySecurityAnswer: (answer: string): boolean => {
+    const admin = storage.getSingle<Admin>(STORAGE_KEYS.ADMIN);
+    if (!admin) return false;
+    
+    return decrypt(admin.securityAnswerHash).toLowerCase() === answer.toLowerCase().trim();
+  },
+
+  resetCredentials: (newUsername: string, newPassword: string): boolean => {
+    const admin = storage.getSingle<Admin>(STORAGE_KEYS.ADMIN);
+    if (!admin) return false;
+
+    const updatedAdmin: Admin = {
+      ...admin,
+      username: newUsername,
+      passwordHash: encrypt(newPassword),
+      updatedAt: new Date().toISOString()
+    };
+
+    storage.setSingle(STORAGE_KEYS.ADMIN, updatedAdmin);
+    return true;
+  },
+
+  emergencyReset: (): void => {
+    // Clear all app data
+    Object.values(STORAGE_KEYS).forEach(key => {
+      storage.remove(key);
+    });
+    
+    // Reinitialize with fresh admin
+    initializeAdmin();
   }
 };
