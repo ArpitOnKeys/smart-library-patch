@@ -1,15 +1,23 @@
 
 export interface Student {
   id: string;
+  enrollmentNo: string;
   name: string;
   fatherName: string;
   contact: string;
   aadharNumber: string;
   address: string;
+  gender: 'Male' | 'Female';
   shift: 'Morning' | 'Evening';
+  timing: string;
   monthlyFees: number;
+  feesPaidTill: string;
   seatNumber: string;
+  joiningDate: string;
   admissionDate: string;
+  assignedStaff: string;
+  paymentMode: 'Cash' | 'Online' | 'UPI' | 'Card';
+  profilePicture?: string;
   createdAt: string;
   updatedAt: string;
 }
