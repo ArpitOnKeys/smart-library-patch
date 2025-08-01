@@ -6,11 +6,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { studentDb } from '@/lib/database';
 import { Student } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Edit, Trash2, Users } from 'lucide-react';
+import { Search, Edit, Trash2, Users, Eye, Download, FileSpreadsheet, QrCode } from 'lucide-react';
 import { StudentEditForm } from './StudentEditForm';
+import { StudentProfileModal } from './StudentProfileModal';
+import { StudentQRGenerator } from './StudentQRGenerator';
+import { exportAllStudentsCSV, exportMultipleStudentsPDF } from '@/utils/exportUtils';
 
 interface StudentTableProps {
   refreshTrigger: number;
@@ -22,6 +26,11 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
   const [searchTerm, setSearchTerm] = useState('');
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [qrStudent, setQrStudent] = useState<Student | null>(null);
+  const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -47,6 +56,76 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
   const handleEdit = (student: Student) => {
     setEditingStudent(student);
     setIsEditDialogOpen(true);
+  };
+
+  const handleViewProfile = (student: Student) => {
+    setSelectedStudent(student);
+    setIsProfileModalOpen(true);
+  };
+
+  const handleShowQR = (student: Student) => {
+    setQrStudent(student);
+    setIsQrDialogOpen(true);
+  };
+
+  const handleSelectStudent = (studentId: string, checked: boolean) => {
+    const newSelected = new Set(selectedStudents);
+    if (checked) {
+      newSelected.add(studentId);
+    } else {
+      newSelected.delete(studentId);
+    }
+    setSelectedStudents(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedStudents(new Set(filteredStudents.map(s => s.id)));
+    } else {
+      setSelectedStudents(new Set());
+    }
+  };
+
+  const handleExportSelected = async () => {
+    const studentsToExport = students.filter(s => selectedStudents.has(s.id));
+    if (studentsToExport.length === 0) {
+      toast({
+        title: 'No Students Selected',
+        description: 'Please select at least one student to export.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      await exportMultipleStudentsPDF(studentsToExport);
+      toast({
+        title: 'Export Successful',
+        description: `${studentsToExport.length} student profiles exported successfully.`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export student profiles. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleExportAllCSV = () => {
+    try {
+      exportAllStudentsCSV();
+      toast({
+        title: 'CSV Export Successful',
+        description: 'All student data exported to CSV successfully.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Export Failed',
+        description: 'Failed to export CSV. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDelete = (student: Student) => {
@@ -89,20 +168,45 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {/* Search Bar */}
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name, contact, seat number..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
+          {/* Search Bar and Export Controls */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center space-x-2 flex-1">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name, contact, seat number..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              <Badge variant="secondary" className="px-3 py-2">
+                {filteredStudents.length} Students
+              </Badge>
             </div>
-            <Badge variant="secondary" className="px-3 py-2">
-              {filteredStudents.length} Students
-            </Badge>
+            
+            <div className="flex items-center gap-2">
+              {selectedStudents.size > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportSelected}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Export Selected ({selectedStudents.size})
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportAllCSV}
+                className="flex items-center gap-2"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Export CSV
+              </Button>
+            </div>
           </div>
 
           {/* Students Table */}
@@ -110,9 +214,15 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Seat No.</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Father's Name</TableHead>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedStudents.size === filteredStudents.length && filteredStudents.length > 0}
+                      onChange={(e) => handleSelectAll(e.target.checked)}
+                      className="rounded"
+                    />
+                  </TableHead>
+                  <TableHead>Student</TableHead>
                   <TableHead>Contact</TableHead>
                   <TableHead>Shift</TableHead>
                   <TableHead>Monthly Fees</TableHead>
@@ -123,16 +233,37 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
               <TableBody>
                 {filteredStudents.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       {searchTerm ? 'No students found matching your search.' : 'No students registered yet.'}
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredStudents.map((student) => (
-                    <TableRow key={student.id}>
-                      <TableCell className="font-medium">{student.seatNumber}</TableCell>
-                      <TableCell>{student.name}</TableCell>
-                      <TableCell>{student.fatherName}</TableCell>
+                    <TableRow key={student.id} className={selectedStudents.has(student.id) ? 'bg-muted/50' : ''}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={selectedStudents.has(student.id)}
+                          onChange={(e) => handleSelectStudent(student.id, e.target.checked)}
+                          className="rounded"
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={student.profilePicture} alt={student.name} />
+                            <AvatarFallback className="text-xs">
+                              {student.name.charAt(0).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {student.enrollmentNo} • Seat {student.seatNumber}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
                       <TableCell>{student.contact}</TableCell>
                       <TableCell>
                         <Badge variant={student.shift === 'Morning' ? 'default' : 'secondary'}>
@@ -142,19 +273,37 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
                       <TableCell>₹{student.monthlyFees}</TableCell>
                       <TableCell>{new Date(student.admissionDate).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
+                        <div className="flex justify-end gap-1">
                           <Button
-                            variant="outline"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewProfile(student)}
+                            title="View Profile"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleEdit(student)}
+                            title="Edit Student"
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
                           <Button
-                            variant="outline"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleShowQR(student)}
+                            title="Generate QR Code"
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(student)}
                             className="text-destructive hover:text-destructive"
+                            title="Delete Student"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -184,6 +333,30 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
                 onCancel={() => setIsEditDialogOpen(false)}
               />
             )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Profile Modal */}
+        <StudentProfileModal
+          student={selectedStudent}
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          onStudentUpdated={() => {
+            handleStudentUpdated();
+            setIsProfileModalOpen(false);
+          }}
+        />
+
+        {/* QR Code Dialog */}
+        <Dialog open={isQrDialogOpen} onOpenChange={setIsQrDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Student QR Code</DialogTitle>
+              <DialogDescription>
+                Generate and download QR code for quick student identification.
+              </DialogDescription>
+            </DialogHeader>
+            {qrStudent && <StudentQRGenerator student={qrStudent} />}
           </DialogContent>
         </Dialog>
       </CardContent>
