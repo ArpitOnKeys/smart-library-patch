@@ -17,6 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { CalendarIcon, Camera, ImageIcon, User, UserPlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { SeatSelector } from './SeatSelector';
+import { isSeatAvailable } from '@/utils/seatAllocation';
 
 // Character limits for fields
 const LIMITS = {
@@ -36,7 +38,7 @@ const admissionSchema = z.object({
   aadharNumber: z.string().regex(/^\d{12}$/, 'Aadhar number must be exactly 12 digits'),
   address: z.string().min(10, 'Address must be at least 10 characters').max(LIMITS.address),
   gender: z.enum(['Male', 'Female'], { required_error: 'Please select gender' }),
-  shift: z.enum(['Morning', 'Evening'], { required_error: 'Please select a shift' }),
+  shift: z.enum(['Morning', 'Evening', 'Full Time'], { required_error: 'Please select a shift' }),
   timing: z.string().min(1, 'Timing is required').max(LIMITS.timing),
   monthlyFees: z.string().min(1, 'Monthly fees is required').refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
@@ -170,23 +172,23 @@ export const AdmissionForm = ({ onStudentAdded }: AdmissionFormProps) => {
     setIsSubmitting(true);
     
     try {
-      // Check if seat number already exists
-      const existingStudents = studentDb.getAll();
-      const seatExists = existingStudents.some(
-        student => student.seatNumber.toLowerCase() === data.seatNumber.toLowerCase()
-      );
+      // Check if seat is available based on shift logic
+      const seatAvailable = isSeatAvailable(data.seatNumber, {
+        shift: data.shift as 'Morning' | 'Evening' | 'Full Time'
+      });
       
-      if (seatExists) {
+      if (!seatAvailable) {
         toast({
-          title: 'Error',
-          description: 'Seat number already exists. Please choose a different seat number.',
           variant: 'destructive',
+          title: 'Seat Not Available',
+          description: `Seat ${data.seatNumber} is not available for ${data.shift} shift. Please choose a different seat.`,
         });
         setIsSubmitting(false);
         return;
       }
 
       // Check if Aadhar number already exists
+      const existingStudents = studentDb.getAll();
       const aadharExists = existingStudents.some(
         student => student.aadharNumber === data.aadharNumber
       );
@@ -493,6 +495,7 @@ export const AdmissionForm = ({ onStudentAdded }: AdmissionFormProps) => {
                         <SelectContent>
                           <SelectItem value="Morning">Morning</SelectItem>
                           <SelectItem value="Evening">Evening</SelectItem>
+                          <SelectItem value="Full Time">Full Time</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -544,22 +547,10 @@ export const AdmissionForm = ({ onStudentAdded }: AdmissionFormProps) => {
                   )}
                 />
 
-                {/* Select Seat */}
-                <FormField
-                  control={form.control}
-                  name="seatNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-medium">Select Seat</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="A1, B2, etc." 
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                {/* Smart Seat Selector */}
+                <SeatSelector
+                  form={form}
+                  selectedShift={form.watch('shift')}
                 />
 
                 {/* Joining Date */}

@@ -8,7 +8,7 @@ export interface Student {
   aadharNumber: string;
   address: string;
   gender: 'Male' | 'Female';
-  shift: 'Morning' | 'Evening';
+  shift: 'Morning' | 'Evening' | 'Full Time';
   timing: string;
   monthlyFees: number;
   feesPaidTill: string;

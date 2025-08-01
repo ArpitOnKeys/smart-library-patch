@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { studentDb } from '@/lib/database';
 import { Student } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { SeatSelector } from './SeatSelector';
+import { isSeatAvailable } from '@/utils/seatAllocation';
 
 const editSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -18,7 +19,7 @@ const editSchema = z.object({
   contact: z.string().regex(/^[6-9]\d{9}$/, 'Contact must be a valid 10-digit Indian mobile number'),
   aadharNumber: z.string().regex(/^\d{12}$/, 'Aadhar number must be exactly 12 digits'),
   address: z.string().min(10, 'Address must be at least 10 characters'),
-  shift: z.enum(['Morning', 'Evening']),
+  shift: z.enum(['Morning', 'Evening', 'Full Time']),
   monthlyFees: z.string().min(1, 'Monthly fees is required').refine(
     (val) => !isNaN(Number(val)) && Number(val) > 0,
     'Monthly fees must be a positive number'
@@ -46,7 +47,7 @@ export const StudentEditForm = ({ student, onStudentUpdated, onCancel }: Student
       contact: student.contact,
       aadharNumber: student.aadharNumber,
       address: student.address,
-      shift: student.shift,
+      shift: student.shift as 'Morning' | 'Evening' | 'Full Time',
       monthlyFees: student.monthlyFees.toString(),
       seatNumber: student.seatNumber,
     },
@@ -56,23 +57,24 @@ export const StudentEditForm = ({ student, onStudentUpdated, onCancel }: Student
     setIsSubmitting(true);
     
     try {
-      // Check if seat number already exists (excluding current student)
-      const existingStudents = studentDb.getAll();
-      const seatExists = existingStudents.some(
-        s => s.id !== student.id && s.seatNumber.toLowerCase() === data.seatNumber.toLowerCase()
-      );
+      // Check if seat is available based on shift logic (excluding current student)
+      const seatAvailable = isSeatAvailable(data.seatNumber, {
+        shift: data.shift as 'Morning' | 'Evening' | 'Full Time',
+        excludeStudentId: student.id
+      });
       
-      if (seatExists) {
+      if (!seatAvailable) {
         toast({
-          title: 'Error',
-          description: 'Seat number already exists. Please choose a different seat number.',
           variant: 'destructive',
+          title: 'Seat Not Available',
+          description: `Seat ${data.seatNumber} is not available for ${data.shift} shift. Please choose a different seat.`,
         });
         setIsSubmitting(false);
         return;
       }
 
       // Check if Aadhar number already exists (excluding current student)
+      const existingStudents = studentDb.getAll();
       const aadharExists = existingStudents.some(
         s => s.id !== student.id && s.aadharNumber === data.aadharNumber
       );
@@ -196,6 +198,7 @@ export const StudentEditForm = ({ student, onStudentUpdated, onCancel }: Student
                   <SelectContent>
                     <SelectItem value="Morning">Morning</SelectItem>
                     <SelectItem value="Evening">Evening</SelectItem>
+                    <SelectItem value="Full Time">Full Time</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -217,19 +220,14 @@ export const StudentEditForm = ({ student, onStudentUpdated, onCancel }: Student
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="seatNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Seat Number</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {/* Smart Seat Selector */}
+          <div className="space-y-2">
+            <SeatSelector
+              form={form}
+              selectedShift={form.watch('shift')}
+              excludeStudentId={student.id}
+            />
+          </div>
         </div>
 
         <FormField
