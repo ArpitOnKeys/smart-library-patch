@@ -10,11 +10,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { studentDb } from '@/lib/database';
 import { Student } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Edit, Trash2, Users, Eye, Download, FileSpreadsheet, QrCode } from 'lucide-react';
+import { Search, Edit, Trash2, Users, Eye, Download, FileSpreadsheet, QrCode, MessageSquare } from 'lucide-react';
 import { StudentEditForm } from './StudentEditForm';
 import { StudentProfileModal } from './StudentProfileModal';
 import { StudentQRGenerator } from './StudentQRGenerator';
 import { exportAllStudentsCSV, exportMultipleStudentsPDF } from '@/utils/exportUtils';
+import { WhatsAppIntegration } from '../whatsapp/WhatsAppIntegration';
 
 interface StudentTableProps {
   refreshTrigger: number;
@@ -31,6 +32,7 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
   const [qrStudent, setQrStudent] = useState<Student | null>(null);
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [showWhatsApp, setShowWhatsApp] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -186,6 +188,15 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
             </div>
             
             <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowWhatsApp(true)}
+                className="flex items-center gap-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                WhatsApp Integration
+              </Button>
               {selectedStudents.size > 0 && (
                 <Button
                   variant="outline"
@@ -357,6 +368,22 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
               </DialogDescription>
             </DialogHeader>
             {qrStudent && <StudentQRGenerator student={qrStudent} />}
+          </DialogContent>
+        </Dialog>
+
+        {/* WhatsApp Integration Dialog */}
+        <Dialog open={showWhatsApp} onOpenChange={setShowWhatsApp}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>WhatsApp Integration</DialogTitle>
+              <DialogDescription>
+                Send personalized messages to students via WhatsApp
+              </DialogDescription>
+            </DialogHeader>
+            <WhatsAppIntegration 
+              students={students}
+              selectedStudents={students.filter(s => selectedStudents.has(s.id))}
+            />
           </DialogContent>
         </Dialog>
       </CardContent>
