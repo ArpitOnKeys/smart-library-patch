@@ -8,8 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2 } from 'lucide-react';
+import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Wifi, WifiOff, QrCode, Link, Unlink } from 'lucide-react';
 import { Student } from '@/types/database';
+import { useWhatsAppService } from '@/hooks/useWhatsAppService';
 
 interface MessageTemplate {
   id: string;
@@ -25,7 +26,7 @@ interface WhatsAppLog {
   phoneNumber: string;
   message: string;
   timestamp: string;
-  status: 'sent' | 'failed';
+  status: 'sent' | 'failed' | 'delivered';
 }
 
 interface WhatsAppIntegrationProps {
@@ -60,15 +61,26 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [customMessage, setCustomMessage] = useState('');
   const [previewStudent, setPreviewStudent] = useState<Student | null>(null);
-  const [logs, setLogs] = useState<WhatsAppLog[]>([]);
   const [newTemplate, setNewTemplate] = useState({ name: '', content: '' });
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [showQRDialog, setShowQRDialog] = useState(false);
   const { toast } = useToast();
+  
+  const {
+    session,
+    isConnected,
+    isConnecting,
+    isLoading,
+    logs,
+    generateQR,
+    sendMessage,
+    sendBulkMessages,
+    disconnect,
+  } = useWhatsAppService();
 
   useEffect(() => {
     loadTemplates();
-    loadLogs();
   }, []);
 
   const loadTemplates = () => {
@@ -81,22 +93,12 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     }
   };
 
-  const loadLogs = () => {
-    const saved = localStorage.getItem('whatsapp_logs');
-    if (saved) {
-      setLogs(JSON.parse(saved));
-    }
-  };
 
   const saveTemplates = (newTemplates: MessageTemplate[]) => {
     setTemplates(newTemplates);
     localStorage.setItem('whatsapp_templates', JSON.stringify(newTemplates));
   };
 
-  const saveLogs = (newLogs: WhatsAppLog[]) => {
-    setLogs(newLogs);
-    localStorage.setItem('whatsapp_logs', JSON.stringify(newLogs));
-  };
 
   const formatMessage = (template: string, student: Student): string => {
     return template
@@ -116,43 +118,44 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     return cleaned;
   };
 
-  const sendWhatsAppMessage = (student: Student, message: string) => {
+  const sendWhatsAppMessage = async (student: Student, message: string) => {
+    if (!isConnected) {
+      toast({
+        title: "WhatsApp Not Connected",
+        description: "Please connect your WhatsApp account first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const cleanedPhone = cleanPhoneNumber(student.contact);
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
     
-    // Log the message attempt
-    const log: WhatsAppLog = {
-      id: Date.now().toString(),
+    const success = await sendMessage({
+      phone: cleanedPhone,
+      message,
       studentId: student.id,
       studentName: student.name,
-      phoneNumber: student.contact,
-      message,
-      timestamp: new Date().toISOString(),
-      status: 'sent'
-    };
-
-    const newLogs = [log, ...logs];
-    saveLogs(newLogs);
-
-    // Open WhatsApp
-    window.open(whatsappUrl, '_blank');
-
-    toast({
-      title: "WhatsApp Opened",
-      description: `Message prepared for ${student.name}`,
     });
 
-    if (onSingleMessage) {
+    if (success && onSingleMessage) {
       onSingleMessage(student);
     }
   };
 
-  const sendBulkMessages = () => {
+  const sendBulkMessagesHandler = async () => {
     if (!selectedTemplate && !customMessage) {
       toast({
         title: "Error",
         description: "Please select a template or enter a custom message",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isConnected) {
+      toast({
+        title: "WhatsApp Not Connected",
+        description: "Please connect your WhatsApp account first.",
         variant: "destructive",
       });
       return;
@@ -163,17 +166,14 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
       ? templates.find(t => t.id === selectedTemplate)?.content || ''
       : customMessage;
 
-    targetStudents.forEach((student, index) => {
-      setTimeout(() => {
-        const formattedMessage = formatMessage(messageTemplate, student);
-        sendWhatsAppMessage(student, formattedMessage);
-      }, index * 1000); // 1 second delay between messages
-    });
+    const messages = targetStudents.map(student => ({
+      phone: cleanPhoneNumber(student.contact),
+      message: formatMessage(messageTemplate, student),
+      studentId: student.id,
+      studentName: student.name,
+    }));
 
-    toast({
-      title: "Bulk Messages",
-      description: `Sending messages to ${targetStudents.length} students`,
-    });
+    await sendBulkMessages(messages);
   };
 
   const addTemplate = () => {
@@ -249,14 +249,105 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     return formatMessage(messageTemplate, previewStudent);
   };
 
+  const handleConnectWhatsApp = async () => {
+    setShowQRDialog(true);
+    await generateQR();
+  };
+
   return (
     <div className="space-y-6">
+      {/* WhatsApp Connection Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              WhatsApp Integration
+            </div>
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <Badge variant="default" className="flex items-center gap-1">
+                  <Wifi className="h-3 w-3" />
+                  Connected
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="flex items-center gap-1">
+                  <WifiOff className="h-3 w-3" />
+                  Not Connected
+                </Badge>
+              )}
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            {!isConnected ? (
+              <Button onClick={handleConnectWhatsApp} disabled={isLoading}>
+                <Link className="h-4 w-4 mr-2" />
+                {isConnecting ? 'Connecting...' : 'Link WhatsApp Account'}
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={disconnect}>
+                <Unlink className="h-4 w-4 mr-2" />
+                Disconnect WhatsApp
+              </Button>
+            )}
+          </div>
+          
+          {session?.sessionData?.phone && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Connected to: {session.sessionData.phone}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* QR Code Dialog */}
+      <Dialog open={showQRDialog} onOpenChange={setShowQRDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Connect WhatsApp Account</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-center">
+            {session?.qrCode ? (
+              <>
+                <div className="flex justify-center">
+                  <img src={session.qrCode} alt="WhatsApp QR Code" className="w-48 h-48" />
+                </div>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    1. Open WhatsApp on your phone
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    2. Go to Settings → Linked Devices
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    3. Scan this QR code
+                  </p>
+                </div>
+                {isConnecting && (
+                  <div className="flex items-center justify-center gap-2">
+                    <Clock className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Waiting for connection...</span>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex items-center justify-center gap-2 py-8">
+                <Clock className="h-4 w-4 animate-spin" />
+                <span>Generating QR code...</span>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Message Composer */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            WhatsApp Integration
+            <Send className="h-5 w-5" />
+            Send Messages
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -318,9 +409,13 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
           )}
 
           <div className="flex gap-2">
-            <Button onClick={sendBulkMessages} className="flex items-center gap-2">
+            <Button 
+              onClick={sendBulkMessagesHandler} 
+              className="flex items-center gap-2"
+              disabled={!isConnected || isLoading}
+            >
               <Send className="h-4 w-4" />
-              Send to {selectedStudents.length > 0 ? `${selectedStudents.length} Selected` : 'All Students'}
+              {isLoading ? 'Sending...' : `Send to ${selectedStudents.length > 0 ? `${selectedStudents.length} Selected` : 'All Students'}`}
             </Button>
             
             <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
