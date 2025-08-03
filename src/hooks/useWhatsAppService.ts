@@ -113,30 +113,53 @@ export const useWhatsAppService = () => {
       const response = await callWhatsAppFunction('generate-qr');
       setSession(response);
       
-      // Start polling for connection status
+      // Start polling for connection status with retry mechanism
+      let retryCount = 0;
+      const maxRetries = 30; // 60 seconds with 2-second intervals
+      
       const pollInterval = setInterval(async () => {
-        const statusResponse = await callWhatsAppFunction('check-session', { sessionId: response.sessionId });
-        
-        if (statusResponse.status === 'connected') {
-          setSession(prev => prev ? { ...prev, ...statusResponse } : statusResponse);
-          clearInterval(pollInterval);
-          toast({
-            title: "WhatsApp Connected",
-            description: "Your WhatsApp account has been successfully linked!",
-          });
-        } else if (statusResponse.status === 'not-found') {
-          clearInterval(pollInterval);
-          setSession(null);
-          toast({
-            title: "QR Code Expired",
-            description: "Please generate a new QR code to connect.",
-            variant: "destructive",
-          });
+        try {
+          const statusResponse = await callWhatsAppFunction('check-session', { sessionId: response.sessionId });
+          
+          if (statusResponse.status === 'connected') {
+            setSession(prev => prev ? { 
+              ...prev, 
+              ...statusResponse,
+              connectedAt: new Date().toISOString()
+            } : statusResponse);
+            clearInterval(pollInterval);
+            toast({
+              title: "WhatsApp Connected",
+              description: "Your WhatsApp account has been successfully linked!",
+            });
+          } else if (statusResponse.status === 'not-found' || retryCount >= maxRetries) {
+            clearInterval(pollInterval);
+            setSession(null);
+            toast({
+              title: "QR Code Expired",
+              description: "Please generate a new QR code to connect.",
+              variant: "destructive",
+            });
+          }
+          
+          retryCount++;
+        } catch (error) {
+          console.error('Polling error:', error);
+          retryCount++;
+          if (retryCount >= maxRetries) {
+            clearInterval(pollInterval);
+            setSession(null);
+          }
         }
       }, 2000);
 
-      // Stop polling after 60 seconds
-      setTimeout(() => clearInterval(pollInterval), 60000);
+      // Auto-cleanup after maximum time
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (session?.status !== 'connected') {
+          setSession(null);
+        }
+      }, maxRetries * 2000);
       
     } catch (error) {
       toast({

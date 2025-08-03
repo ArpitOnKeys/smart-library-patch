@@ -1,13 +1,18 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Users, Clock, TrendingUp, Settings, LogOut } from 'lucide-react';
+import { BookOpen, Users, Clock, TrendingUp, Settings, LogOut, MessageSquare, Wifi, WifiOff } from 'lucide-react';
 import { auth } from '@/lib/database';
+import { Badge } from '@/components/ui/badge';
+import { WhatsAppControlPanel } from '@/components/whatsapp/WhatsAppControlPanel';
+import { useWhatsAppService } from '@/hooks/useWhatsAppService';
 
 export const NavBar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [showWhatsAppPanel, setShowWhatsAppPanel] = useState(false);
+  const { isConnected, session } = useWhatsAppService();
   
   const handleLogout = () => {
     auth.logout();
@@ -54,6 +59,22 @@ export const NavBar: React.FC = () => {
 
           {/* User Actions */}
           <div className="flex items-center space-x-2">
+            {/* WhatsApp Control Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowWhatsAppPanel(true)}
+              className="button-enhanced relative"
+            >
+              <MessageSquare className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">WhatsApp</span>
+              {isConnected ? (
+                <Badge className="absolute -top-1 -right-1 h-3 w-3 p-0 bg-green-500 border-white">
+                  <span className="sr-only">Connected</span>
+                </Badge>
+              ) : null}
+            </Button>
+            
             <div className="hidden sm:block">
               <span className="text-sm text-muted-foreground">Admin</span>
             </div>
@@ -69,6 +90,12 @@ export const NavBar: React.FC = () => {
           </div>
         </div>
       </div>
+      
+      {/* WhatsApp Control Panel */}
+      <WhatsAppControlPanel 
+        open={showWhatsAppPanel} 
+        onOpenChange={setShowWhatsAppPanel} 
+      />
     </nav>
   );
 };

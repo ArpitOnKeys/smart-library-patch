@@ -123,6 +123,11 @@ export const WhatsAppSettings = () => {
                       <p>3. Tap "Link a Device"</p>
                       <p>4. Scan this QR code</p>
                     </div>
+                    <div className="p-2 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                      <p className="text-xs text-blue-800">
+                        <strong>Note:</strong> QR code will expire in 60 seconds. A new one will be generated automatically if needed.
+                      </p>
+                    </div>
                   </div>
                   {isConnecting && (
                     <div className="flex items-center justify-center gap-2 p-3 bg-muted rounded-lg">
