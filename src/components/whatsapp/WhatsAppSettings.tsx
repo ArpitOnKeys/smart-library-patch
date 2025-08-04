@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Settings, Wifi, WifiOff, Link, Unlink, QrCode, Clock } from 'lucide-react';
+import { Settings, Wifi, WifiOff, Link, Unlink, QrCode, Clock, MessageCircle } from 'lucide-react';
 import { useWhatsAppService } from '@/hooks/useWhatsAppService';
 
 export const WhatsAppSettings = () => {
@@ -15,6 +15,7 @@ export const WhatsAppSettings = () => {
     isConnecting,
     isLoading,
     generateQR,
+    testConnection,
     disconnect,
   } = useWhatsAppService();
 
@@ -68,10 +69,16 @@ export const WhatsAppSettings = () => {
                 {isConnecting ? 'Connecting...' : 'Link Account'}
               </Button>
             ) : (
-              <Button variant="outline" onClick={disconnect}>
-                <Unlink className="h-4 w-4 mr-2" />
-                Disconnect
-              </Button>
+              <>
+                <Button variant="outline" onClick={testConnection} disabled={isLoading}>
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  {isLoading ? 'Testing...' : 'Test Connection'}
+                </Button>
+                <Button variant="outline" onClick={disconnect}>
+                  <Unlink className="h-4 w-4 mr-2" />
+                  Disconnect
+                </Button>
+              </>
             )}
           </div>
         </div>

@@ -157,11 +157,24 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
   };
 
   const generatePDFSlip = async (payment: FeePayment) => {
-    if (!selectedStudent) return;
+    if (!selectedStudent) {
+      console.error('No student selected for PDF generation');
+      return;
+    }
     
+    console.log('Starting PDF generation for payment:', payment.id);
     setIsGeneratingPDF(payment.id);
     
     try {
+      // Validate required data
+      if (!selectedStudent.name || !selectedStudent.contact || !selectedStudent.enrollmentNo) {
+        throw new Error('Student data is incomplete. Missing required fields.');
+      }
+      
+      if (!payment.amount || payment.amount <= 0) {
+        throw new Error('Invalid payment amount');
+      }
+      
       const receiptData = {
         student: selectedStudent,
         payment,
@@ -170,11 +183,19 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
         monthsRegistered: calculateMonthsRegistered(),
       };
       
+      console.log('Generating PDF with data:', receiptData);
+      
       const pdfBytes = await generateProfessionalReceipt(receiptData);
+      
+      if (!pdfBytes || pdfBytes.length === 0) {
+        throw new Error('PDF generation returned empty file');
+      }
+      
       const fileName = generateReceiptFileName(selectedStudent, payment);
+      console.log('Generated PDF file:', fileName, 'Size:', pdfBytes.length, 'bytes');
       
       // Save receipt log
-      saveReceiptLog({
+      const receiptLog = saveReceiptLog({
         studentId: selectedStudent.id,
         studentName: selectedStudent.name,
         paymentId: payment.id,
@@ -185,21 +206,25 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
         whatsappSent: false,
       });
       
+      console.log('Receipt log saved:', receiptLog);
+      
+      // Download the PDF
       downloadPDF(pdfBytes, fileName);
       
       toast({
         title: 'PDF Receipt Generated!',
-        description: 'Professional receipt has been downloaded successfully.',
+        description: `Professional receipt downloaded: ${fileName}`,
       });
       
       return pdfBytes;
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('PDF generation error:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to generate PDF receipt. Please try again.',
+        title: 'PDF Generation Failed',
+        description: error instanceof Error ? error.message : 'Failed to generate PDF receipt. Please try again.',
         variant: 'destructive',
       });
+      return null;
     } finally {
       setIsGeneratingPDF(null);
     }
@@ -251,18 +276,49 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
   };
 
   const handleAutoGenerateAndSend = async (payment: FeePayment) => {
-    if (!selectedStudent) return;
+    if (!selectedStudent) {
+      console.error('No student selected for auto-generate and send');
+      return;
+    }
+    
+    console.log('Starting auto-generate and send for payment:', payment.id);
     
     try {
-      // Generate PDF
+      // Step 1: Generate PDF
+      console.log('Step 1: Generating PDF...');
       const pdfBytes = await generatePDFSlip(payment);
       
-      // Send WhatsApp message with PDF
-      if (pdfBytes && isConnected) {
-        await sendWhatsAppMessage(payment, pdfBytes);
+      if (!pdfBytes) {
+        console.error('PDF generation failed, cannot proceed with WhatsApp');
+        toast({
+          title: 'PDF Generation Failed',
+          description: 'Cannot send WhatsApp message without PDF receipt.',
+          variant: 'destructive',
+        });
+        return;
       }
+      
+      console.log('PDF generated successfully, size:', pdfBytes.length);
+      
+      // Step 2: Send WhatsApp message with PDF reference
+      if (isConnected) {
+        console.log('Step 2: Sending WhatsApp message...');
+        await sendWhatsAppMessage(payment, pdfBytes);
+      } else {
+        console.log('WhatsApp not connected, skipping message send');
+        toast({
+          title: 'PDF Generated',
+          description: 'PDF generated successfully. Connect WhatsApp to send automatically.',
+        });
+      }
+      
     } catch (error) {
       console.error('Error in auto-generate and send:', error);
+      toast({
+        title: 'Process Failed',
+        description: error instanceof Error ? error.message : 'Failed to complete PDF generation and WhatsApp sending.',
+        variant: 'destructive',
+      });
     }
   };
 
