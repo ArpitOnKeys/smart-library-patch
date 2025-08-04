@@ -11,8 +11,11 @@ import { Label } from '@/components/ui/label';
 import { studentDb, feePaymentDb } from '@/lib/database';
 import { Student, FeePayment } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
-import { IndianRupee, Download, MessageCircle, Plus, Calculator } from 'lucide-react';
+import { IndianRupee, Download, MessageCircle, Plus, Calculator, Send } from 'lucide-react';
 import { format } from 'date-fns';
+import { useWhatsAppService } from '@/hooks/useWhatsAppService';
+import { generateProfessionalReceipt, downloadPDF } from '@/utils/pdfGenerator';
+import { saveReceiptLog, updateReceiptWhatsAppStatus, generateReceiptFileName } from '@/utils/receiptStorage';
 
 interface FeeTrackerProps {
   refreshTrigger: number;
@@ -27,7 +30,10 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
   const [paymentMonth, setPaymentMonth] = useState('');
   const [paymentYear, setPaymentYear] = useState(new Date().getFullYear().toString());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState<string | null>(null);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState<string | null>(null);
   const { toast } = useToast();
+  const { sendMessage, isConnected } = useWhatsAppService();
 
   useEffect(() => {
     loadStudents();
@@ -130,6 +136,9 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
         description: `₹${amount} payment recorded for ${paymentMonth} ${paymentYear}`,
       });
 
+      // Auto-generate PDF and send WhatsApp
+      await handleAutoGenerateAndSend(newPayment);
+
       loadFeePayments(selectedStudent.id);
       setPaymentAmount('');
       setPaymentMonth('');
@@ -147,61 +156,114 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
     }
   };
 
-  const generatePDFSlip = (payment: FeePayment) => {
+  const generatePDFSlip = async (payment: FeePayment) => {
     if (!selectedStudent) return;
     
-    // Create a simple receipt text for download
-    const receiptContent = `
-PATCH - THE SMART LIBRARY
-Fee Receipt
-
-Student Name: ${selectedStudent.name}
-Father's Name: ${selectedStudent.fatherName}
-Seat Number: ${selectedStudent.seatNumber}
-Contact: ${selectedStudent.contact}
-
-Payment Details:
-Amount Paid: ₹${payment.amount}
-Month: ${payment.month} ${payment.year}
-Payment Date: ${format(new Date(payment.paymentDate), 'dd/MM/yyyy')}
-Monthly Fees: ₹${selectedStudent.monthlyFees}
-
-Total Paid: ₹${calculateTotalPaid()}
-Total Due: ₹${calculateTotalDue()}
-
-Signature: _________________
-Date: ${format(new Date(), 'dd/MM/yyyy')}
-    `;
-
-    // Create and download the file
-    const blob = new Blob([receiptContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Fee_Receipt_${selectedStudent.name}_${payment.month}_${payment.year}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: 'Receipt Downloaded',
-      description: 'Fee receipt has been downloaded successfully.',
-    });
+    setIsGeneratingPDF(payment.id);
+    
+    try {
+      const receiptData = {
+        student: selectedStudent,
+        payment,
+        totalPaid: calculateTotalPaid(),
+        totalDue: calculateTotalDue(),
+        monthsRegistered: calculateMonthsRegistered(),
+      };
+      
+      const pdfBytes = await generateProfessionalReceipt(receiptData);
+      const fileName = generateReceiptFileName(selectedStudent, payment);
+      
+      // Save receipt log
+      saveReceiptLog({
+        studentId: selectedStudent.id,
+        studentName: selectedStudent.name,
+        paymentId: payment.id,
+        fileName,
+        amount: payment.amount,
+        month: payment.month,
+        year: payment.year,
+        whatsappSent: false,
+      });
+      
+      downloadPDF(pdfBytes, fileName);
+      
+      toast({
+        title: 'PDF Receipt Generated!',
+        description: 'Professional receipt has been downloaded successfully.',
+      });
+      
+      return pdfBytes;
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF receipt. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingPDF(null);
+    }
   };
 
-  const sendWhatsAppMessage = (payment: FeePayment) => {
+  const sendWhatsAppMessage = async (payment: FeePayment, pdfBytes?: Uint8Array) => {
     if (!selectedStudent) return;
     
-    const message = `Hello! Fee receipt for ${selectedStudent.name}:\n\nAmount: ₹${payment.amount}\nMonth: ${payment.month} ${payment.year}\nSeat: ${selectedStudent.seatNumber}\n\nTotal Due: ₹${calculateTotalDue()}\n\nThank you!\n- PATCH Library`;
+    if (!isConnected) {
+      toast({
+        title: 'WhatsApp Not Connected',
+        description: 'Please connect your WhatsApp account first.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
-    const whatsappUrl = `https://wa.me/91${selectedStudent.contact}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    setIsSendingWhatsApp(payment.id);
     
-    toast({
-      title: 'WhatsApp Opened',
-      description: 'WhatsApp message prepared. Please send manually.',
-    });
+    try {
+      const message = `🎓 *PATCH - The Smart Library*\n📋 *Fee Receipt*\n\nDear ${selectedStudent.name},\n\nYour fee payment has been successfully received!\n\n💰 *Amount:* ₹${payment.amount}\n📅 *Period:* ${payment.month} ${payment.year}\n🪑 *Seat:* ${selectedStudent.seatNumber}\n📱 *Contact:* ${selectedStudent.contact}\n\n📊 *Summary:*\n✅ Total Paid: ₹${calculateTotalPaid()}\n${calculateTotalDue() > 0 ? `⚠️ Remaining Due: ₹${calculateTotalDue()}` : '✅ All dues cleared!'}\n\n${pdfBytes ? '📎 Official receipt attached below.\n\n' : ''}Thank you for your prompt payment!\n\n📚 *PATCH - The Smart Library*\n🏢 [Your Address]\n📞 [Your Contact]`;
+      
+      const success = await sendMessage({
+        phone: selectedStudent.contact,
+        message,
+        studentId: selectedStudent.id,
+        studentName: selectedStudent.name,
+      });
+      
+      if (success) {
+        // Update receipt log if exists
+        updateReceiptWhatsAppStatus(payment.id, true);
+        
+        toast({
+          title: 'WhatsApp Message Sent!',
+          description: `Receipt sent to ${selectedStudent.name} successfully.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error sending WhatsApp message:', error);
+      toast({
+        title: 'Failed to Send',
+        description: 'Could not send WhatsApp message. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingWhatsApp(null);
+    }
+  };
+
+  const handleAutoGenerateAndSend = async (payment: FeePayment) => {
+    if (!selectedStudent) return;
+    
+    try {
+      // Generate PDF
+      const pdfBytes = await generatePDFSlip(payment);
+      
+      // Send WhatsApp message with PDF
+      if (pdfBytes && isConnected) {
+        await sendWhatsAppMessage(payment, pdfBytes);
+      }
+    } catch (error) {
+      console.error('Error in auto-generate and send:', error);
+    }
   };
 
   const months = [
@@ -374,15 +436,25 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
                                   variant="outline"
                                   size="sm"
                                   onClick={() => generatePDFSlip(payment)}
+                                  disabled={isGeneratingPDF === payment.id}
                                 >
-                                  <Download className="h-4 w-4" />
+                                  {isGeneratingPDF === payment.id ? (
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                  ) : (
+                                    <Download className="h-4 w-4" />
+                                  )}
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => sendWhatsAppMessage(payment)}
+                                  disabled={isSendingWhatsApp === payment.id || !isConnected}
                                 >
-                                  <MessageCircle className="h-4 w-4" />
+                                  {isSendingWhatsApp === payment.id ? (
+                                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                  ) : (
+                                    <Send className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </div>
                             </TableCell>
