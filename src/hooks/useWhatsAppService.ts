@@ -1,30 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-
-interface WhatsAppSession {
-  id: string;
-  qrCode?: string;
-  status: 'pending' | 'connected' | 'disconnected';
-  connectedAt?: string;
-  sessionData?: any;
-}
-
-interface WhatsAppMessage {
-  phone: string;
-  message: string;
-  studentId: string;
-  studentName: string;
-}
-
-interface WhatsAppLog {
-  id: string;
-  studentId: string;
-  studentName: string;
-  phoneNumber: string;
-  message: string;
-  timestamp: string;
-  status: 'sent' | 'failed' | 'delivered';
-}
+import { whatsappClient, WhatsAppSession, WhatsAppMessage, WhatsAppLog } from '@/utils/whatsappClient';
+import { logger } from '@/utils/logger';
 
 export const useWhatsAppService = () => {
   const [session, setSession] = useState<WhatsAppSession | null>(null);
@@ -32,207 +9,72 @@ export const useWhatsAppService = () => {
   const [logs, setLogs] = useState<WhatsAppLog[]>([]);
   const { toast } = useToast();
 
-  // Load session and logs from localStorage on mount
+  // Initialize session from client on mount
   useEffect(() => {
-    const savedSession = localStorage.getItem('whatsapp_session');
-    if (savedSession) {
-      setSession(JSON.parse(savedSession));
-    }
-
-    const savedLogs = localStorage.getItem('whatsapp_logs');
+    const currentSession = whatsappClient.getSession();
+    setSession(currentSession);
+    
+    // Load logs from localStorage
+    const savedLogs = localStorage.getItem('whatsapp_logs_v2');
     if (savedLogs) {
-      setLogs(JSON.parse(savedLogs));
+      try {
+        setLogs(JSON.parse(savedLogs));
+      } catch (error) {
+        logger.error('whatsapp', 'Failed to load logs from storage', error);
+      }
     }
-  }, []);
 
-  // Save session to localStorage when it changes
-  useEffect(() => {
-    if (session) {
-      localStorage.setItem('whatsapp_session', JSON.stringify(session));
-    } else {
-      localStorage.removeItem('whatsapp_session');
-    }
-  }, [session]);
+    logger.info('whatsapp', 'WhatsApp service initialized', { 
+      hasSession: !!currentSession,
+      sessionStatus: currentSession?.status 
+    });
+  }, []);
 
   // Save logs to localStorage when they change
   useEffect(() => {
-    localStorage.setItem('whatsapp_logs', JSON.stringify(logs));
+    if (logs.length > 0) {
+      try {
+        localStorage.setItem('whatsapp_logs_v2', JSON.stringify(logs));
+      } catch (error) {
+        logger.error('whatsapp', 'Failed to save logs to storage', error);
+      }
+    }
   }, [logs]);
 
-  const callWhatsAppFunction = async (action: string, data: any = {}) => {
-    // For Tauri app - we need to implement actual WhatsApp Web integration
-    // This currently falls back to mock for development
-    console.log(`WhatsApp action requested: ${action}`, data);
-    
-    // Log the attempt for debugging
-    toast({
-      title: "WhatsApp Development Mode",
-      description: `Action: ${action} - Using mock responses for testing`,
-      variant: "default",
-    });
-    
-    return getMockResponse(action, data);
-  };
+  // Update session state when client session changes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const currentSession = whatsappClient.getSession();
+      setSession(prevSession => {
+        if (JSON.stringify(prevSession) !== JSON.stringify(currentSession)) {
+          return currentSession;
+        }
+        return prevSession;
+      });
+    }, 1000);
 
-  const getMockResponse = (action: string, data: any) => {
-    switch (action) {
-      case 'generate-qr':
-        const sessionId = crypto.randomUUID();
-        // Generate a realistic WhatsApp QR code pattern
-        const qrData = `2@${sessionId.slice(0, 8)},${Date.now()},${Math.random().toString(36).slice(2)}`;
-        const qrCode = `https://chart.googleapis.com/chart?chs=256x256&cht=qr&chl=${encodeURIComponent(qrData)}`;
-        console.log('Generated QR for session:', sessionId);
-        return { 
-          id: sessionId,
-          sessionId, 
-          qrCode, 
-          status: 'pending' as const,
-          generatedAt: new Date().toISOString()
-        };
-      
-      case 'check-session':
-        // Simulate a more realistic connection process
-        const now = Date.now();
-        const shouldConnect = (now % 15000) < 5000; // Connect after ~10-15 seconds
-        console.log('Checking session status:', shouldConnect ? 'connected' : 'pending');
-        return { 
-          status: shouldConnect ? 'connected' as const : 'pending' as const,
-          sessionData: shouldConnect ? {
-            phone: '+91-98765-43210',
-            name: 'Demo WhatsApp Account'
-          } : undefined
-        };
-      
-      case 'send-message':
-        // Simulate message sending with realistic delays and failures
-        const success = Math.random() > 0.1; // 90% success rate
-        console.log('Mock message send:', success ? 'success' : 'failed', data);
-        return {
-          success,
-          log: {
-            id: crypto.randomUUID(),
-            studentId: data.studentId,
-            studentName: data.studentName,
-            phoneNumber: data.phone,
-            message: data.message,
-            timestamp: new Date().toISOString(),
-            status: success ? 'sent' as const : 'failed' as const
-          }
-        };
-      
-      case 'send-bulk-messages':
-        // Simulate bulk message sending
-        const results = data.messages.map((msg: WhatsAppMessage) => ({
-          id: crypto.randomUUID(),
-          studentId: msg.studentId,
-          studentName: msg.studentName,
-          phoneNumber: msg.phone,
-          message: msg.message,
-          timestamp: new Date().toISOString(),
-          status: Math.random() > 0.1 ? 'sent' as const : 'failed' as const
-        }));
-        return { success: true, results };
-      
-      case 'disconnect':
-        console.log('Disconnecting session:', data.sessionId);
-        return { success: true };
-      
-      default:
-        return { success: true };
-    }
-  };
+    return () => clearInterval(interval);
+  }, []);
+
+  // No longer needed - using whatsappClient directly
 
   const generateQR = async () => {
     setIsLoading(true);
-    console.log('Starting QR generation process...');
+    logger.info('whatsapp', 'Starting QR generation process');
     
     try {
-      const response = await callWhatsAppFunction('generate-qr');
-      console.log('QR response received:', response);
-      
-      const initialSession: WhatsAppSession = {
-        id: response.id,
-        qrCode: response.qrCode,
-        status: response.status,
-        sessionData: response.sessionData
-      };
-      
-      setSession(initialSession);
+      const newSession = await whatsappClient.generateQR();
+      setSession(newSession);
       
       toast({
         title: "QR Code Generated",
         description: "Scan the QR code with your WhatsApp to connect",
       });
       
-      // Start polling for connection status with clear logging
-      let retryCount = 0;
-      const maxRetries = 20; // 40 seconds with 2-second intervals
-      
-      const pollInterval = setInterval(async () => {
-        console.log(`Polling attempt ${retryCount + 1}/${maxRetries}`);
-        
-        try {
-          const statusResponse = await callWhatsAppFunction('check-session', { sessionId: response.sessionId });
-          console.log('Status check response:', statusResponse);
-          
-          if (statusResponse.status === 'connected') {
-            const connectedSession: WhatsAppSession = { 
-              id: response.id,
-              qrCode: response.qrCode,
-              status: 'connected',
-              connectedAt: new Date().toISOString(),
-              sessionData: statusResponse.sessionData
-            };
-            
-            setSession(connectedSession);
-            clearInterval(pollInterval);
-            
-            console.log('WhatsApp connection successful!');
-            toast({
-              title: "WhatsApp Connected!",
-              description: `Connected to ${statusResponse.sessionData?.phone || 'WhatsApp account'}`,
-            });
-            
-          } else if (retryCount >= maxRetries) {
-            clearInterval(pollInterval);
-            
-            // Auto-regenerate QR if expired
-            console.log('QR expired, regenerating...');
-            toast({
-              title: "QR Code Expired",
-              description: "Generating a new QR code automatically...",
-              variant: "destructive",
-            });
-            
-            // Generate new QR automatically
-            setTimeout(() => generateQR(), 1000);
-            return;
-          }
-          
-          retryCount++;
-        } catch (error) {
-          console.error('Polling error:', error);
-          retryCount++;
-          
-          if (retryCount >= maxRetries) {
-            clearInterval(pollInterval);
-            setSession(null);
-            toast({
-              title: "Connection Failed",
-              description: "Unable to establish WhatsApp connection. Please try again.",
-              variant: "destructive",
-            });
-          }
-        }
-      }, 2000);
-
-      // Auto-cleanup after maximum time
-      setTimeout(() => {
-        clearInterval(pollInterval);
-      }, maxRetries * 2000 + 5000);
+      logger.info('whatsapp', 'QR generation successful', { sessionId: newSession.id });
       
     } catch (error) {
-      console.error('QR generation error:', error);
+      logger.error('whatsapp', 'QR generation failed', error);
       setSession(null);
       toast({
         title: "QR Generation Failed",
@@ -245,8 +87,8 @@ export const useWhatsAppService = () => {
   };
 
   const sendMessage = async (message: WhatsAppMessage) => {
-    if (!session || session.status !== 'connected') {
-      console.log('WhatsApp not connected, cannot send message');
+    if (!whatsappClient.isConnected()) {
+      logger.warn('whatsapp', 'Attempted to send message without connection', { student: message.studentName });
       toast({
         title: "WhatsApp Not Connected",
         description: "Please connect your WhatsApp account first using the QR code.",
@@ -255,65 +97,43 @@ export const useWhatsAppService = () => {
       return false;
     }
 
-    console.log('Sending WhatsApp message:', message);
     setIsLoading(true);
     
     try {
-      // Validate phone number format
-      if (!message.phone || message.phone.length < 10) {
-        throw new Error('Invalid phone number format');
-      }
+      const result = await whatsappClient.sendMessage(message);
       
-      // Validate message content
-      if (!message.message || message.message.trim().length === 0) {
-        throw new Error('Message content is empty');
-      }
+      // Add to logs
+      setLogs(prev => [result.log, ...prev]);
       
-      const response = await callWhatsAppFunction('send-message', message);
-      console.log('Send message response:', response);
-      
-      if (response.success && response.log) {
-        // Add to logs
-        setLogs(prev => [response.log, ...prev]);
-        
-        console.log('Message sent successfully to:', message.studentName);
+      if (result.success) {
         toast({
           title: "Message Sent Successfully!",
-          description: `Receipt sent to ${message.studentName} (${message.phone})`,
+          description: `Message sent to ${message.studentName} (${message.phone})`,
         });
         return true;
       } else {
-        throw new Error('Send message failed: ' + JSON.stringify(response));
+        toast({
+          title: "Message Failed",
+          description: `Failed to send to ${message.studentName}. ${result.log.errorMessage}`,
+          variant: "destructive",
+        });
+        return false;
       }
     } catch (error) {
-      console.error('Message sending error:', error);
-      
-      // Log failed attempt
-      const failedLog: WhatsAppLog = {
-        id: crypto.randomUUID(),
-        studentId: message.studentId,
-        studentName: message.studentName,
-        phoneNumber: message.phone,
-        message: message.message,
-        timestamp: new Date().toISOString(),
-        status: 'failed' as const
-      };
-      
-      setLogs(prev => [failedLog, ...prev]);
-      
+      logger.error('whatsapp', 'Unexpected error during message send', error);
       toast({
         title: "Message Failed",
-        description: `Failed to send to ${message.studentName}. ${error instanceof Error ? error.message : 'Unknown error'}`,
+        description: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
+      return false;
     } finally {
       setIsLoading(false);
     }
-    return false;
   };
 
   const sendBulkMessages = async (messages: WhatsAppMessage[]) => {
-    if (!session || session.status !== 'connected') {
+    if (!whatsappClient.isConnected()) {
       toast({
         title: "WhatsApp Not Connected",
         description: "Please connect your WhatsApp account first.",
@@ -324,13 +144,13 @@ export const useWhatsAppService = () => {
 
     setIsLoading(true);
     try {
-      const response = await callWhatsAppFunction('send-bulk-messages', { messages });
+      const result = await whatsappClient.sendBulkMessages(messages);
       
-      if (response.success && response.results) {
-        setLogs(prev => [...response.results, ...prev]);
+      if (result.success && result.results) {
+        setLogs(prev => [...result.results, ...prev]);
         
-        const sentCount = response.results.filter((r: WhatsAppLog) => r.status === 'sent').length;
-        const failedCount = response.results.length - sentCount;
+        const sentCount = result.results.filter((r: WhatsAppLog) => r.status === 'sent').length;
+        const failedCount = result.results.length - sentCount;
         
         toast({
           title: "Bulk Messages Completed",
@@ -338,6 +158,7 @@ export const useWhatsAppService = () => {
         });
       }
     } catch (error) {
+      logger.error('whatsapp', 'Bulk message sending failed', error);
       toast({
         title: "Bulk Messages Failed",
         description: "Failed to send bulk messages. Please try again.",
@@ -349,7 +170,7 @@ export const useWhatsAppService = () => {
   };
 
   const testConnection = async () => {
-    if (!session || session.status !== 'connected') {
+    if (!whatsappClient.isConnected()) {
       toast({
         title: "No Active Connection",
         description: "Please connect WhatsApp first using the QR code.",
@@ -358,30 +179,27 @@ export const useWhatsAppService = () => {
       return false;
     }
 
-    console.log('Testing WhatsApp connection...');
     setIsLoading(true);
     
     try {
-      const testMessage: WhatsAppMessage = {
-        phone: session.sessionData?.phone || '+91-98765-43210',
-        message: '🤖 Test message from PATCH Library Management System. Connection is working!',
-        studentId: 'test',
-        studentName: 'Test Connection'
-      };
+      const success = await whatsappClient.testConnection();
       
-      const response = await callWhatsAppFunction('send-message', testMessage);
-      
-      if (response.success) {
+      if (success) {
         toast({
           title: "Connection Test Successful!",
           description: "WhatsApp connection is working properly.",
         });
         return true;
       } else {
-        throw new Error('Test message failed');
+        toast({
+          title: "Connection Test Failed",
+          description: "WhatsApp connection appears to be broken. Please reconnect.",
+          variant: "destructive",
+        });
+        return false;
       }
     } catch (error) {
-      console.error('Connection test failed:', error);
+      logger.error('whatsapp', 'Connection test error', error);
       toast({
         title: "Connection Test Failed",
         description: "WhatsApp connection appears to be broken. Please reconnect.",
@@ -394,9 +212,7 @@ export const useWhatsAppService = () => {
   };
 
   const disconnect = async () => {
-    if (session) {
-      await callWhatsAppFunction('disconnect', { sessionId: session.id });
-    }
+    whatsappClient.disconnect();
     setSession(null);
     toast({
       title: "WhatsApp Disconnected",
@@ -404,8 +220,18 @@ export const useWhatsAppService = () => {
     });
   };
 
-  const isConnected = session?.status === 'connected';
-  const isConnecting = session?.status === 'pending';
+  const resetSession = async () => {
+    whatsappClient.resetSession();
+    setSession(null);
+    setLogs([]);
+    toast({
+      title: "Session Reset",
+      description: "WhatsApp session has been reset. You can now reconnect.",
+    });
+  };
+
+  const isConnected = whatsappClient.isConnected();
+  const isConnecting = whatsappClient.isConnecting();
 
   return {
     session,
@@ -418,5 +244,6 @@ export const useWhatsAppService = () => {
     sendBulkMessages,
     testConnection,
     disconnect,
+    resetSession,
   };
 };

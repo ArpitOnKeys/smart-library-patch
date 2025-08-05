@@ -3,11 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Settings, Wifi, WifiOff, Link, Unlink, QrCode, Clock, MessageCircle } from 'lucide-react';
+import { Settings, Wifi, WifiOff, Link, Unlink, QrCode, Clock, MessageCircle, RefreshCw, Bug } from 'lucide-react';
 import { useWhatsAppService } from '@/hooks/useWhatsAppService';
+import { WhatsAppDebugPanel } from './WhatsAppDebugPanel';
 
 export const WhatsAppSettings = () => {
   const [showQRDialog, setShowQRDialog] = useState(false);
+  const [showDebugPanel, setShowDebugPanel] = useState(false);
   
   const {
     session,
@@ -17,6 +19,7 @@ export const WhatsAppSettings = () => {
     generateQR,
     testConnection,
     disconnect,
+    resetSession,
   } = useWhatsAppService();
 
   const handleConnectWhatsApp = async () => {
@@ -62,7 +65,7 @@ export const WhatsAppSettings = () => {
             )}
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {!isConnected ? (
               <Button onClick={handleConnectWhatsApp} disabled={isLoading}>
                 <Link className="h-4 w-4 mr-2" />
@@ -80,6 +83,14 @@ export const WhatsAppSettings = () => {
                 </Button>
               </>
             )}
+            <Button variant="outline" onClick={resetSession}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Reset Session
+            </Button>
+            <Button variant="outline" onClick={() => setShowDebugPanel(true)}>
+              <Bug className="h-4 w-4 mr-2" />
+              Debug Panel
+            </Button>
           </div>
         </div>
 
@@ -130,9 +141,9 @@ export const WhatsAppSettings = () => {
                       <p>3. Tap "Link a Device"</p>
                       <p>4. Scan this QR code</p>
                     </div>
-                    <div className="p-2 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                      <p className="text-xs text-blue-800">
-                        <strong>Note:</strong> QR code will expire in 60 seconds. A new one will be generated automatically if needed.
+                    <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg border-l-4 border-blue-400">
+                      <p className="text-xs text-blue-800 dark:text-blue-200">
+                        <strong>Note:</strong> QR code refreshes every 45 seconds. A new one will be generated automatically if needed.
                       </p>
                     </div>
                   </div>
@@ -150,6 +161,16 @@ export const WhatsAppSettings = () => {
                 </div>
               )}
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Debug Panel Dialog */}
+        <Dialog open={showDebugPanel} onOpenChange={setShowDebugPanel}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>WhatsApp Debug Panel</DialogTitle>
+            </DialogHeader>
+            <WhatsAppDebugPanel />
           </DialogContent>
         </Dialog>
       </CardContent>
