@@ -14,6 +14,7 @@ export interface ReceiptLog {
   whatsappSentAt?: string;
 }
 
+
 const RECEIPT_LOGS_KEY = 'receipt_logs';
 
 export const saveReceiptLog = (log: Omit<ReceiptLog, 'id' | 'generatedAt'>): ReceiptLog => {

@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { IndianRupee, Download, MessageCircle, Plus, Calculator, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { useWhatsAppService } from '@/hooks/useWhatsAppService';
-import { generateProfessionalReceipt, downloadPDF } from '@/utils/pdfGenerator';
+import { generateProfessionalReceipt, downloadPDF, savePDFToLocal } from '@/utils/pdfGenerator';
 import { saveReceiptLog, updateReceiptWhatsAppStatus, generateReceiptFileName } from '@/utils/receiptStorage';
 
 interface FeeTrackerProps {
@@ -194,6 +194,10 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
       const fileName = generateReceiptFileName(selectedStudent, payment);
       console.log('Generated PDF file:', fileName, 'Size:', pdfBytes.length, 'bytes');
       
+      // Save PDF to local storage
+      const savedPath = await savePDFToLocal(pdfBytes, fileName);
+      console.log('PDF saved to path:', savedPath);
+      
       // Save receipt log
       const receiptLog = saveReceiptLog({
         studentId: selectedStudent.id,
@@ -252,7 +256,7 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
         message,
         studentId: selectedStudent.id,
         studentName: selectedStudent.name,
-      });
+      }, pdfBytes ? 'receipt-path' : undefined); // TODO: Pass actual saved PDF path
       
       if (success) {
         // Update receipt log if exists

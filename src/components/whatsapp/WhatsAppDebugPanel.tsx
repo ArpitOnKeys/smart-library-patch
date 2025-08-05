@@ -31,16 +31,19 @@ export const WhatsAppDebugPanel = () => {
   
   const {
     session,
+    status,
     isConnected,
     isConnecting,
     isLoading,
     logs: whatsappLogs,
+    backendLogs,
     testConnection,
     resetSession,
-    sendMessage
+    sendMessage,
+    refreshLogs
   } = useWhatsAppService();
 
-  const refreshLogs = () => {
+  const refreshSystemLogs = () => {
     setLogs(logger.getRecentLogs(100));
     toast({
       title: "Logs Refreshed",
@@ -139,11 +142,12 @@ export const WhatsAppDebugPanel = () => {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="status" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="status">Status</TabsTrigger>
+            <TabsTrigger value="qr">QR Code</TabsTrigger>
             <TabsTrigger value="test">Test</TabsTrigger>
             <TabsTrigger value="messages">Messages</TabsTrigger>
-            <TabsTrigger value="logs">System Logs</TabsTrigger>
+            <TabsTrigger value="logs">Backend Logs</TabsTrigger>
           </TabsList>
 
           <TabsContent value="status" className="space-y-4">
@@ -162,12 +166,12 @@ export const WhatsAppDebugPanel = () => {
 
               {session?.sessionData && (
                 <>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium">Connected Phone</Label>
-                    <p className="text-sm text-muted-foreground">
-                      {session.sessionData.phone}
-                    </p>
-                  </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Connected Phone</Label>
+                <p className="text-sm text-muted-foreground">
+                  +{status.connectedDevice?.phone || session.sessionData?.phone}
+                </p>
+              </div>
                   
                   <div className="space-y-2">
                     <Label className="text-sm font-medium">Connected At</Label>
@@ -196,6 +200,48 @@ export const WhatsAppDebugPanel = () => {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Reset Session
               </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="qr" className="space-y-4">
+            <div className="text-center space-y-4">
+              {status.qrCode ? (
+                <div className="space-y-4">
+                  <div className="flex justify-center">
+                    <img 
+                      src={status.qrCode} 
+                      alt="WhatsApp QR Code" 
+                      className="border rounded-lg"
+                      style={{ maxWidth: '256px', maxHeight: '256px' }}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Scan this QR code with your WhatsApp to connect
+                  </p>
+                  <div className="flex justify-center">
+                    <Button onClick={resetSession} variant="outline">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Generate New QR
+                    </Button>
+                  </div>
+                </div>
+              ) : isConnected ? (
+                <div className="space-y-4">
+                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto" />
+                  <p className="text-lg font-medium">WhatsApp Connected!</p>
+                  <p className="text-sm text-muted-foreground">
+                    Connected to: +{status.connectedDevice?.phone}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <Phone className="h-16 w-16 text-gray-400 mx-auto" />
+                  <p className="text-lg font-medium">Not Connected</p>
+                  <p className="text-sm text-muted-foreground">
+                    Generate a QR code to connect your WhatsApp
+                  </p>
+                </div>
+              )}
             </div>
           </TabsContent>
 
@@ -275,9 +321,9 @@ export const WhatsAppDebugPanel = () => {
 
           <TabsContent value="logs" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="font-medium">System Logs ({logs.length})</h4>
+              <h4 className="font-medium">Backend Logs ({backendLogs.length})</h4>
               <div className="flex gap-2">
-                <Button onClick={refreshLogs} size="sm" variant="outline">
+                <Button onClick={() => { refreshLogs(); refreshSystemLogs(); }} size="sm" variant="outline">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh
                 </Button>
@@ -293,19 +339,16 @@ export const WhatsAppDebugPanel = () => {
             </div>
             
             <ScrollArea className="h-[300px] w-full border rounded-md p-4">
-              {logs.length === 0 ? (
-                <p className="text-center text-muted-foreground">No logs available</p>
+              {backendLogs.length === 0 ? (
+                <p className="text-center text-muted-foreground">No backend logs available</p>
               ) : (
                 <div className="space-y-2">
-                  {logs.map((log, index) => (
+                  {backendLogs.map((log, index) => (
                     <div key={index} className="text-xs font-mono border-b pb-1">
                       <div className="flex items-center gap-2">
                         <span className="text-gray-500">
                           {new Date(log.timestamp).toLocaleTimeString()}
                         </span>
-                        <Badge variant="outline" className="text-xs">
-                          {log.category}
-                        </Badge>
                         <span className={`font-medium ${getLogLevelColor(log.level)}`}>
                           {log.level.toUpperCase()}
                         </span>

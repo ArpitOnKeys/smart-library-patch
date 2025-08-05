@@ -3,6 +3,23 @@ import { saveAs } from 'file-saver';
 import { Student, FeePayment } from '@/types/database';
 import { format } from 'date-fns';
 
+// Tauri API imports for file operations
+declare global {
+  interface Window {
+    __TAURI__?: {
+      fs: {
+        writeFile: (path: string, contents: Uint8Array) => Promise<void>;
+        createDir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
+        exists: (path: string) => Promise<boolean>;
+      };
+      path: {
+        join: (...paths: string[]) => Promise<string>;
+        appDataDir: () => Promise<string>;
+      };
+    };
+  }
+}
+
 export interface ReceiptData {
   student: Student;
   payment: FeePayment;
@@ -335,6 +352,40 @@ export const generateProfessionalReceipt = async (data: ReceiptData): Promise<Ui
   // Save PDF
   const pdfBytes = await pdfDoc.save();
   return pdfBytes;
+};
+
+export const savePDFToLocal = async (pdfBytes: Uint8Array, filename: string): Promise<string> => {
+  try {
+    // Use Tauri APIs if available (desktop app)
+    if (window.__TAURI__) {
+      const appDataPath = await window.__TAURI__.path.appDataDir();
+      const receiptsDir = await window.__TAURI__.path.join(appDataPath, 'receipts');
+      const currentMonth = format(new Date(), 'yyyy-MM');
+      const monthDir = await window.__TAURI__.path.join(receiptsDir, currentMonth);
+      
+      // Create directories if they don't exist
+      const dirExists = await window.__TAURI__.fs.exists(monthDir);
+      if (!dirExists) {
+        await window.__TAURI__.fs.createDir(monthDir, { recursive: true });
+      }
+      
+      const filePath = await window.__TAURI__.path.join(monthDir, filename);
+      await window.__TAURI__.fs.writeFile(filePath, pdfBytes);
+      
+      return filePath;
+    } else {
+      // Fallback to browser download
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      saveAs(blob, filename);
+      return filename;
+    }
+  } catch (error) {
+    console.error('Failed to save PDF:', error);
+    // Fallback to browser download
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    saveAs(blob, filename);
+    return filename;
+  }
 };
 
 export const downloadPDF = (pdfBytes: Uint8Array, filename: string) => {
