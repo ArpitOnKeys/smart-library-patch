@@ -1,413 +1,221 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import { saveAs } from 'file-saver';
-import { Student, FeePayment } from '@/types/database';
 import { format } from 'date-fns';
 
-// Tauri v2 API
-import { invoke } from '@tauri-apps/api/core';
-
-declare global {
-  interface Window {
-    __TAURI__?: {
-      invoke: (command: string, args?: any) => Promise<any>;
-    };
-  }
-}
-
 export interface ReceiptData {
-  student: Student;
-  payment: FeePayment;
-  totalPaid: number;
-  totalDue: number;
-  monthsRegistered: number;
+  receiptNumber: string;
+  studentName: string;
+  enrollmentNo: string;
+  fatherName: string;
+  seatNumber: string;
+  shift: string;
+  amount: number;
+  paymentMethod: string;
+  transactionId?: string;
+  date: string;
+  validityPeriod: string;
 }
 
 export const generateProfessionalReceipt = async (data: ReceiptData): Promise<Uint8Array> => {
-  const { student, payment, totalPaid, totalDue } = data;
-  
-  // Create a new PDF document
-  const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([595, 842]); // A4 size
-  const { width, height } = page.getSize();
-  
-  // Load fonts
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  
-  // Colors
-  const headerColor = rgb(0.2, 0.3, 0.7); // Blue
-  const textColor = rgb(0.1, 0.1, 0.1); // Dark gray
-  const accentColor = rgb(0.8, 0.1, 0.1); // Red
-  
-  let yPosition = height - 60;
-  
-  // Header - Library Name
-  page.drawText('PATCH - THE SMART LIBRARY', {
-    x: 50,
-    y: yPosition,
-    size: 24,
-    font: boldFont,
-    color: headerColor,
-  });
-  
-  yPosition -= 25;
-  page.drawText('Fee Payment Receipt', {
-    x: 50,
-    y: yPosition,
-    size: 16,
-    font: boldFont,
-    color: accentColor,
-  });
-  
-  // Library Address & Contact
-  yPosition -= 40;
-  page.drawText('Address: [Your Library Address Here]', {
-    x: 50,
-    y: yPosition,
-    size: 10,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  yPosition -= 15;
-  page.drawText('Contact: [Your Contact Number] | Email: [Your Email]', {
-    x: 50,
-    y: yPosition,
-    size: 10,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  // Receipt Number and Date
-  yPosition -= 30;
-  const receiptNo = `RCPT-${student.enrollmentNo}-${payment.id.slice(-6)}`;
-  page.drawText(`Receipt No: ${receiptNo}`, {
-    x: 50,
-    y: yPosition,
-    size: 11,
-    font: boldFont,
-    color: textColor,
-  });
-  
-  page.drawText(`Date: ${format(new Date(payment.paymentDate), 'dd/MM/yyyy')}`, {
-    x: width - 150,
-    y: yPosition,
-    size: 11,
-    font: boldFont,
-    color: textColor,
-  });
-  
-  // Student Details Section
-  yPosition -= 40;
-  page.drawText('Student Details:', {
-    x: 50,
-    y: yPosition,
-    size: 14,
-    font: boldFont,
-    color: headerColor,
-  });
-  
-  // Student details in two columns
-  yPosition -= 25;
-  const leftColumnX = 50;
-  const rightColumnX = 300;
-  
-  // Left column
-  page.drawText(`Name: ${student.name}`, {
-    x: leftColumnX,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  yPosition -= 18;
-  page.drawText(`Father's Name: ${student.fatherName}`, {
-    x: leftColumnX,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  yPosition -= 18;
-  page.drawText(`Contact: ${student.contact}`, {
-    x: leftColumnX,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  yPosition -= 18;
-  page.drawText(`Aadhar: ${student.aadharNumber}`, {
-    x: leftColumnX,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  // Right column
-  yPosition += 54; // Reset to top of details
-  page.drawText(`Enrollment No: ${student.enrollmentNo}`, {
-    x: rightColumnX,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  yPosition -= 18;
-  page.drawText(`Seat Number: ${student.seatNumber}`, {
-    x: rightColumnX,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  yPosition -= 18;
-  page.drawText(`Shift: ${student.shift}`, {
-    x: rightColumnX,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  yPosition -= 18;
-  page.drawText(`Timing: ${student.timing}`, {
-    x: rightColumnX,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  // Address (full width)
-  yPosition -= 25;
-  page.drawText(`Address: ${student.address}`, {
-    x: leftColumnX,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  // Payment Details Section
-  yPosition -= 40;
-  page.drawText('Payment Details:', {
-    x: 50,
-    y: yPosition,
-    size: 14,
-    font: boldFont,
-    color: headerColor,
-  });
-  
-  // Payment details box
-  yPosition -= 30;
-  const boxY = yPosition - 80;
-  page.drawRectangle({
-    x: 50,
-    y: boxY,
-    width: width - 100,
-    height: 80,
-    borderColor: rgb(0.8, 0.8, 0.8),
-    borderWidth: 1,
-  });
-  
-  yPosition -= 20;
-  page.drawText(`Payment for Month: ${payment.month} ${payment.year}`, {
-    x: 70,
-    y: yPosition,
-    size: 12,
-    font: boldFont,
-    color: textColor,
-  });
-  
-  yPosition -= 20;
-  page.drawText(`Amount Paid: ₹${payment.amount}`, {
-    x: 70,
-    y: yPosition,
-    size: 12,
-    font: boldFont,
-    color: accentColor,
-  });
-  
-  page.drawText(`Monthly Fees: ₹${student.monthlyFees}`, {
-    x: 300,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  yPosition -= 20;
-  page.drawText(`Payment Date: ${format(new Date(payment.paymentDate), 'dd/MM/yyyy')}`, {
-    x: 70,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  // Summary Section
-  yPosition -= 40;
-  page.drawText('Summary:', {
-    x: 50,
-    y: yPosition,
-    size: 14,
-    font: boldFont,
-    color: headerColor,
-  });
-  
-  yPosition -= 25;
-  page.drawText(`Total Amount Paid Till Date: ₹${totalPaid}`, {
-    x: 70,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  yPosition -= 18;
-  page.drawText(`Remaining Due Amount: ₹${totalDue}`, {
-    x: 70,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: totalDue > 0 ? accentColor : rgb(0.1, 0.7, 0.1),
-  });
-  
-  // Duration section
-  yPosition -= 25;
-  const joiningDate = format(new Date(student.joiningDate), 'dd/MM/yyyy');
-  const currentDate = format(new Date(), 'dd/MM/yyyy');
-  page.drawText(`Duration: ${joiningDate} to ${currentDate}`, {
-    x: 70,
-    y: yPosition,
-    size: 11,
-    font: regularFont,
-    color: textColor,
-  });
-  
-  // Signature section
-  yPosition -= 60;
-  page.drawText('Authorized Signature:', {
-    x: 50,
-    y: yPosition,
-    size: 11,
-    font: boldFont,
-    color: textColor,
-  });
-  
-  page.drawText('Owner/Manager', {
-    x: width - 150,
-    y: yPosition,
-    size: 11,
-    font: boldFont,
-    color: textColor,
-  });
-  
-  yPosition -= 30;
-  page.drawLine({
-    start: { x: 50, y: yPosition },
-    end: { x: 200, y: yPosition },
-    thickness: 1,
-    color: rgb(0.5, 0.5, 0.5),
-  });
-  
-  page.drawLine({
-    start: { x: width - 150, y: yPosition },
-    end: { x: width - 50, y: yPosition },
-    thickness: 1,
-    color: rgb(0.5, 0.5, 0.5),
-  });
-  
-  // Footer
-  yPosition -= 40;
-  page.drawText('Thank you for choosing PATCH - The Smart Library!', {
-    x: 50,
-    y: yPosition,
-    size: 10,
-    font: regularFont,
-    color: rgb(0.5, 0.5, 0.5),
-  });
-  
-  page.drawText('This is a computer-generated receipt.', {
-    x: width - 200,
-    y: yPosition,
-    size: 8,
-    font: regularFont,
-    color: rgb(0.5, 0.5, 0.5),
-  });
-  
-  // Save PDF
-  const pdfBytes = await pdfDoc.save();
-  return pdfBytes;
+  try {
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]); // A4 size in points
+
+    const { width, height } = page.getSize();
+    const margin = 50;
+    
+    // Embed fonts
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const helveticaBoldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    let yPosition = height - margin;
+    
+    // Header
+    page.drawText('PATCH LIBRARY MANAGEMENT SYSTEM', {
+      x: margin,
+      y: yPosition,
+      size: 20,
+      font: helveticaBoldFont,
+      color: rgb(0, 0.4, 0.8),
+    });
+    
+    yPosition -= 40;
+    
+    // Receipt title
+    page.drawText('FEE PAYMENT RECEIPT', {
+      x: margin,
+      y: yPosition,
+      size: 16,
+      font: helveticaBoldFont,
+      color: rgb(0.2, 0.2, 0.2),
+    });
+    
+    // Receipt number and date
+    page.drawText(`Receipt No: ${data.receiptNumber}`, {
+      x: width - margin - 150,
+      y: yPosition,
+      size: 12,
+      font: helveticaFont,
+    });
+    
+    yPosition -= 20;
+    page.drawText(`Date: ${data.date}`, {
+      x: width - margin - 150,
+      y: yPosition,
+      size: 12,
+      font: helveticaFont,
+    });
+    
+    yPosition -= 40;
+    
+    // Horizontal line
+    page.drawLine({
+      start: { x: margin, y: yPosition },
+      end: { x: width - margin, y: yPosition },
+      thickness: 1,
+      color: rgb(0.7, 0.7, 0.7),
+    });
+    
+    yPosition -= 30;
+    
+    // Student Information
+    page.drawText('STUDENT INFORMATION', {
+      x: margin,
+      y: yPosition,
+      size: 14,
+      font: helveticaBoldFont,
+    });
+    
+    yPosition -= 25;
+    
+    const studentInfo = [
+      ['Name:', data.studentName],
+      ['Enrollment No:', data.enrollmentNo],
+      ['Father\'s Name:', data.fatherName],
+      ['Seat Number:', data.seatNumber],
+      ['Shift:', data.shift],
+    ];
+    
+    studentInfo.forEach(([label, value]) => {
+      page.drawText(label, {
+        x: margin,
+        y: yPosition,
+        size: 11,
+        font: helveticaBoldFont,
+      });
+      
+      page.drawText(value, {
+        x: margin + 120,
+        y: yPosition,
+        size: 11,
+        font: helveticaFont,
+      });
+      
+      yPosition -= 20;
+    });
+    
+    yPosition -= 20;
+    
+    // Payment Information
+    page.drawText('PAYMENT DETAILS', {
+      x: margin,
+      y: yPosition,
+      size: 14,
+      font: helveticaBoldFont,
+    });
+    
+    yPosition -= 25;
+    
+    const paymentInfo = [
+      ['Monthly Fees:', `₹${data.amount.toFixed(2)}`],
+      ['Payment Method:', data.paymentMethod],
+      ['Transaction ID:', data.transactionId || 'N/A'],
+      ['Validity Period:', data.validityPeriod],
+    ];
+    
+    paymentInfo.forEach(([label, value]) => {
+      page.drawText(label, {
+        x: margin,
+        y: yPosition,
+        size: 11,
+        font: helveticaBoldFont,
+      });
+      
+      page.drawText(value, {
+        x: margin + 120,
+        y: yPosition,
+        size: 11,
+        font: helveticaFont,
+      });
+      
+      yPosition -= 20;
+    });
+    
+    yPosition -= 20;
+    
+    // Amount in words
+    page.drawText('Amount in Words:', {
+      x: margin,
+      y: yPosition,
+      size: 11,
+      font: helveticaBoldFont,
+    });
+    
+    yPosition -= 18;
+    page.drawText(numberToWords(data.amount) + ' Rupees Only', {
+      x: margin,
+      y: yPosition,
+      size: 11,
+      font: helveticaFont,
+      color: rgb(0.3, 0.3, 0.3),
+    });
+    
+    yPosition -= 40;
+    
+    // Footer
+    page.drawLine({
+      start: { x: margin, y: yPosition },
+      end: { x: width - margin, y: yPosition },
+      thickness: 1,
+      color: rgb(0.7, 0.7, 0.7),
+    });
+    
+    yPosition -= 30;
+    
+    page.drawText('Thank you for your payment!', {
+      x: margin,
+      y: yPosition,
+      size: 12,
+      font: helveticaBoldFont,
+      color: rgb(0, 0.6, 0.2),
+    });
+    
+    page.drawText('This is a computer-generated receipt.', {
+      x: width - margin - 200,
+      y: yPosition,
+      size: 10,
+      font: helveticaFont,
+      color: rgb(0.5, 0.5, 0.5),
+    });
+
+    return await pdfDoc.save();
+  } catch (error) {
+    console.error('PDF generation failed:', error);
+    throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
 };
 
 export const savePDFToLocal = async (pdfBytes: Uint8Array, filename: string): Promise<string> => {
   try {
-    // Use Tauri APIs if available (desktop app)
-    if (window.__TAURI__) {
-      console.log('Using Tauri invoke API');
-      
-      // Get app data directory using Tauri v2 invoke
-      const appDataPath = await invoke('get_app_data_dir');
-      console.log('App data path:', appDataPath);
-      
-      const currentMonth = format(new Date(), 'yyyy-MM');
-      const receiptsDir = `${appDataPath}/receipts`;
-      const monthDir = `${receiptsDir}/${currentMonth}`;
-      
-      console.log('Target directory:', monthDir);
-      
-      // Create directories if they don't exist using Tauri v2 invoke
-      try {
-        const dirExists = await invoke('dir_exists', { path: monthDir });
-        if (!dirExists) {
-          console.log('Creating directory:', monthDir);
-          await invoke('create_dir_recursive', { path: monthDir });
-        }
-      } catch (dirError) {
-        console.warn('Directory creation warning:', dirError);
-        // Try to create parent directory first
-        await invoke('create_dir_recursive', { path: receiptsDir });
-        await invoke('create_dir_recursive', { path: monthDir });
-      }
-      
-      const filePath = `${monthDir}/${filename}`;
-      console.log('Writing PDF to:', filePath);
-      
-      // Convert Uint8Array to regular array for JSON serialization
-      const pdfArray = Array.from(pdfBytes);
-      await invoke('write_file_binary', { path: filePath, contents: pdfArray });
-      console.log('PDF saved successfully to:', filePath);
-      
-      return filePath;
-    } else {
-      console.log('Tauri not available, using browser download');
-      // Fallback to browser download
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      saveAs(blob, filename);
-      return filename;
-    }
-  } catch (error) {
-    console.error('Failed to save PDF:', error);
-    console.error('Error details:', error);
+    // For now, use simple browser download
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    saveAs(blob, filename);
     
-    // Try browser fallback
-    try {
-      console.log('Attempting browser fallback download');
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      saveAs(blob, filename);
-      return filename;
-    } catch (fallbackError) {
-      console.error('Browser fallback also failed:', fallbackError);
-      throw new Error(`PDF save failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    console.log('PDF downloaded successfully:', filename);
+    return `Downloaded: ${filename}`;
+  } catch (error) {
+    console.error('PDF download failed:', error);
+    throw new Error(`Failed to save PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
 
@@ -416,51 +224,62 @@ export const downloadPDF = (pdfBytes: Uint8Array, filename: string) => {
   saveAs(blob, filename);
 };
 
-export const numberToWords = (num: number): string => {
-  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
-  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+// Convert number to words for Indian currency
+function numberToWords(num: number): string {
+  const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine"];
+  const teens = ["Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
 
-  if (num === 0) return 'Zero';
+  if (num === 0) return "Zero";
   
-  let result = '';
+  const convertHundreds = (n: number): string => {
+    let result = "";
+    
+    if (n >= 100) {
+      result += ones[Math.floor(n / 100)] + " Hundred ";
+      n %= 100;
+    }
+    
+    if (n >= 20) {
+      result += tens[Math.floor(n / 10)] + " ";
+      n %= 10;
+    } else if (n >= 10) {
+      result += teens[n - 10] + " ";
+      return result;
+    }
+    
+    if (n > 0) {
+      result += ones[n] + " ";
+    }
+    
+    return result;
+  };
+
+  let result = "";
+  const crores = Math.floor(num / 10000000);
+  num %= 10000000;
   
-  // Handle crores
-  if (num >= 10000000) {
-    result += numberToWords(Math.floor(num / 10000000)) + ' Crore ';
-    num %= 10000000;
+  const lakhs = Math.floor(num / 100000);
+  num %= 100000;
+  
+  const thousands = Math.floor(num / 1000);
+  num %= 1000;
+  
+  if (crores > 0) {
+    result += convertHundreds(crores) + "Crore ";
   }
   
-  // Handle lakhs
-  if (num >= 100000) {
-    result += numberToWords(Math.floor(num / 100000)) + ' Lakh ';
-    num %= 100000;
+  if (lakhs > 0) {
+    result += convertHundreds(lakhs) + "Lakh ";
   }
   
-  // Handle thousands
-  if (num >= 1000) {
-    result += numberToWords(Math.floor(num / 1000)) + ' Thousand ';
-    num %= 1000;
-  }
-  
-  // Handle hundreds
-  if (num >= 100) {
-    result += ones[Math.floor(num / 100)] + ' Hundred ';
-    num %= 100;
-  }
-  
-  // Handle tens and ones
-  if (num >= 20) {
-    result += tens[Math.floor(num / 10)] + ' ';
-    num %= 10;
-  } else if (num >= 10) {
-    result += teens[num - 10] + ' ';
-    return result.trim();
+  if (thousands > 0) {
+    result += convertHundreds(thousands) + "Thousand ";
   }
   
   if (num > 0) {
-    result += ones[num] + ' ';
+    result += convertHundreds(num);
   }
   
   return result.trim();
-};
+}

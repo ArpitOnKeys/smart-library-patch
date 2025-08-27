@@ -123,6 +123,7 @@ class WhatsAppDesktopClient {
     try {
       // Check if WhatsApp Desktop is installed using Tauri
       const isInstalled = await invoke('check_whatsapp_installation') as boolean;
+      const platform = await invoke('get_platform') as string;
       
       if (!this.session) {
         this.session = {
@@ -130,29 +131,31 @@ class WhatsAppDesktopClient {
           status: 'disconnected',
           isDesktopInstalled: isInstalled,
           deviceInfo: {
-            platform: await invoke('get_platform') as string
+            platform
           }
         };
       } else {
         this.session.isDesktopInstalled = isInstalled;
+        this.session.deviceInfo = { platform };
       }
 
       this.saveSession();
       
       logger.info('whatsapp', 'Desktop installation check completed', { 
-        installed: isInstalled 
+        installed: isInstalled,
+        platform 
       });
       
       return isInstalled;
     } catch (error) {
       logger.error('whatsapp', 'Failed to check WhatsApp Desktop installation', error);
       
-      // Fallback: assume installed
+      // Fallback: assume not installed for better UX
       if (!this.session) {
         this.session = {
           id: crypto.randomUUID(),
           status: 'disconnected',
-          isDesktopInstalled: true,
+          isDesktopInstalled: false,
           deviceInfo: {
             platform: 'unknown'
           }
@@ -160,7 +163,7 @@ class WhatsAppDesktopClient {
         this.saveSession();
       }
       
-      return true;
+      return false;
     }
   }
 
@@ -460,16 +463,16 @@ class WhatsAppDesktopClient {
         return false;
       }
 
-      // Try to open WhatsApp without a message (just the app)
-      if (window.__TAURI_SHELL__?.open) {
-        await window.__TAURI_SHELL__.open('whatsapp://');
-      } else {
-        // Fallback for web environment
-        window.open('whatsapp://', '_blank');
-      }
+      // Use Tauri backend command to test connection
+      const result = await invoke('test_whatsapp_connection') as { success: boolean; error?: string };
       
-      logger.info('whatsapp', 'Connection test successful - WhatsApp Desktop opened');
-      return true;
+      if (result.success) {
+        logger.info('whatsapp', 'Connection test successful - WhatsApp Desktop opened');
+        return true;
+      } else {
+        logger.error('whatsapp', 'Connection test failed', result.error);
+        return false;
+      }
     } catch (error) {
       logger.error('whatsapp', 'Connection test failed', error);
       return false;

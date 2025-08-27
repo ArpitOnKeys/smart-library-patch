@@ -65,7 +65,7 @@ export const WhatsAppDesktopIntegration = ({ students, selectedStudents = [], on
   };
 
   const sendBulkMessagesHandler = async () => {
-    if (!customMessage) {
+    if (!customMessage.trim()) {
       toast({
         title: "Error",
         description: "Please enter a message",
@@ -74,13 +74,37 @@ export const WhatsAppDesktopIntegration = ({ students, selectedStudents = [], on
       return;
     }
 
+    if (!isConnected) {
+      toast({
+        title: "WhatsApp Not Connected",
+        description: "Please connect WhatsApp Desktop first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const targetStudents = selectedStudents.length > 0 ? selectedStudents : students;
+    
+    if (targetStudents.length === 0) {
+      toast({
+        title: "No Students Selected",
+        description: "Please select students to send messages to.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const messages = targetStudents.map(student => ({
       phone: student.contact,
       message: formatMessage(customMessage, student),
       studentId: student.id,
       studentName: student.name,
     }));
+
+    toast({
+      title: "Starting Bulk Send",
+      description: `Preparing to send messages to ${messages.length} students...`,
+    });
 
     await sendBulkMessages(messages);
   };
@@ -134,14 +158,22 @@ export const WhatsAppDesktopIntegration = ({ students, selectedStudents = [], on
               />
             </div>
 
-            <Button 
-              onClick={sendBulkMessagesHandler} 
-              disabled={isLoading}
-              className="w-full"
-            >
-              <Send className="h-4 w-4 mr-2" />
-              Send to {selectedStudents.length > 0 ? `${selectedStudents.length} Selected` : 'All Students'}
-            </Button>
+            <div className="space-y-2">
+              <Button 
+                onClick={sendBulkMessagesHandler} 
+                disabled={isLoading || !customMessage.trim()}
+                className="w-full"
+              >
+                <Send className="h-4 w-4 mr-2" />
+                {isLoading ? 'Sending...' : `Send to ${selectedStudents.length > 0 ? `${selectedStudents.length} Selected` : `All ${students.length} Students`}`}
+              </Button>
+              
+              {isLoading && (
+                <div className="text-sm text-muted-foreground text-center">
+                  Messages will open in WhatsApp Desktop with 3-second delays between each message.
+                </div>
+              )}
+            </div>
           </>
         )}
       </CardContent>
