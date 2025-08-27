@@ -116,11 +116,51 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     return cleaned;
   };
 
-  const sendWhatsAppMessage = (student: Student, message: string) => {
+  const sendWhatsAppMessage = async (student: Student, message: string) => {
     const cleanedPhone = cleanPhoneNumber(student.contact);
     const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
     
+    // Multiple fallback URLs for different scenarios
+    const urls = [
+      `whatsapp://send?phone=${cleanedPhone}&text=${encodedMessage}`, // Desktop app protocol
+      `https://api.whatsapp.com/send?phone=${cleanedPhone}&text=${encodedMessage}`, // Official API
+      `https://wa.me/${cleanedPhone}?text=${encodedMessage}`, // Web WhatsApp
+      `https://web.whatsapp.com/send?phone=${cleanedPhone}&text=${encodedMessage}` // Direct web interface
+    ];
+
+    let success = false;
+    let errorMessage = '';
+
+    // Try each URL until one works
+    for (let i = 0; i < urls.length; i++) {
+      try {
+        const url = urls[i];
+        console.log(`Attempting WhatsApp URL ${i + 1}:`, url);
+        
+        // For protocol handlers, try with location.href first
+        if (url.startsWith('whatsapp://')) {
+          try {
+            window.location.href = url;
+            success = true;
+            break;
+          } catch (error) {
+            console.log(`Protocol handler failed, trying next method...`);
+            continue;
+          }
+        } else {
+          // For HTTP URLs, use window.open
+          const newWindow = window.open(url, '_blank');
+          if (newWindow) {
+            success = true;
+            break;
+          }
+        }
+      } catch (error) {
+        errorMessage = `Attempt ${i + 1} failed: ${error}`;
+        console.log(errorMessage);
+      }
+    }
+
     // Log the message attempt
     const log: WhatsAppLog = {
       id: Date.now().toString(),
@@ -129,19 +169,24 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
       phoneNumber: student.contact,
       message,
       timestamp: new Date().toISOString(),
-      status: 'sent'
+      status: success ? 'sent' : 'failed'
     };
 
     const newLogs = [log, ...logs];
     saveLogs(newLogs);
 
-    // Open WhatsApp
-    window.open(whatsappUrl, '_blank');
-
-    toast({
-      title: "WhatsApp Opened",
-      description: `Message prepared for ${student.name}`,
-    });
+    if (success) {
+      toast({
+        title: "WhatsApp Opened",
+        description: `Message prepared for ${student.name}`,
+      });
+    } else {
+      toast({
+        title: "WhatsApp Failed",
+        description: `Could not open WhatsApp for ${student.name}. Please ensure WhatsApp is installed or try manually copying: +${cleanedPhone}`,
+        variant: "destructive",
+      });
+    }
 
     if (onSingleMessage) {
       onSingleMessage(student);
