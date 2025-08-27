@@ -51,6 +51,23 @@ export interface WhatsAppLog {
   status: 'sent' | 'failed' | 'pending';
 }
 
+export interface ReceiptData {
+  receiptNumber: string;
+  studentName: string;
+  enrollmentNo: string;
+  fatherName: string;
+  contact: string;
+  seatNumber: string;
+  amount: number;
+  month: string;
+  year: number;
+  paymentDate: string;
+  monthlyFees: number;
+  totalPaid: number;
+  totalDue: number;
+  monthsRegistered: number;
+}
+
 export interface Admin {
   id: string;
   username: string;
