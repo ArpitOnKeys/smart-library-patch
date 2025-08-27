@@ -15,7 +15,7 @@ import { StudentEditForm } from './StudentEditForm';
 import { StudentProfileModal } from './StudentProfileModal';
 import { StudentQRGenerator } from './StudentQRGenerator';
 import { exportAllStudentsCSV, exportMultipleStudentsPDF } from '@/utils/exportUtils';
-import { WhatsAppIntegration } from '../whatsapp/WhatsAppIntegration';
+import { WhatsAppDesktopIntegration } from '../whatsapp/WhatsAppDesktopIntegration';
 
 interface StudentTableProps {
   refreshTrigger: number;
@@ -380,7 +380,7 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
                 Send personalized messages to students via WhatsApp
               </DialogDescription>
             </DialogHeader>
-            <WhatsAppIntegration 
+            <WhatsAppDesktopIntegration 
               students={students}
               selectedStudents={students.filter(s => selectedStudents.has(s.id))}
             />
