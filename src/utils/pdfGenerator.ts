@@ -3,23 +3,13 @@ import { saveAs } from 'file-saver';
 import { Student, FeePayment } from '@/types/database';
 import { format } from 'date-fns';
 
-// Tauri API interfaces for file operations
-interface TauriFS {
-  writeFile: (path: string, contents: Uint8Array) => Promise<void>;
-  createDir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
-  exists: (path: string) => Promise<boolean>;
-}
-
-interface TauriPath {
-  join: (...paths: string[]) => Promise<string>;
-  appDataDir: () => Promise<string>;
-}
+// Tauri v2 API
+import { invoke } from '@tauri-apps/api/core';
 
 declare global {
   interface Window {
     __TAURI__?: {
-      fs: TauriFS;
-      path: TauriPath;
+      invoke: (command: string, args?: any) => Promise<any>;
     };
   }
 }
@@ -362,35 +352,38 @@ export const savePDFToLocal = async (pdfBytes: Uint8Array, filename: string): Pr
   try {
     // Use Tauri APIs if available (desktop app)
     if (window.__TAURI__) {
-      console.log('Using Tauri file system API');
+      console.log('Using Tauri invoke API');
       
-      const appDataPath = await window.__TAURI__.path.appDataDir();
+      // Get app data directory using Tauri v2 invoke
+      const appDataPath = await invoke('get_app_data_dir');
       console.log('App data path:', appDataPath);
       
-      const receiptsDir = await window.__TAURI__.path.join(appDataPath, 'receipts');
       const currentMonth = format(new Date(), 'yyyy-MM');
-      const monthDir = await window.__TAURI__.path.join(receiptsDir, currentMonth);
+      const receiptsDir = `${appDataPath}/receipts`;
+      const monthDir = `${receiptsDir}/${currentMonth}`;
       
       console.log('Target directory:', monthDir);
       
-      // Create directories if they don't exist
+      // Create directories if they don't exist using Tauri v2 invoke
       try {
-        const dirExists = await window.__TAURI__.fs.exists(monthDir);
+        const dirExists = await invoke('dir_exists', { path: monthDir });
         if (!dirExists) {
           console.log('Creating directory:', monthDir);
-          await window.__TAURI__.fs.createDir(monthDir, { recursive: true });
+          await invoke('create_dir_recursive', { path: monthDir });
         }
       } catch (dirError) {
         console.warn('Directory creation warning:', dirError);
         // Try to create parent directory first
-        await window.__TAURI__.fs.createDir(receiptsDir, { recursive: true });
-        await window.__TAURI__.fs.createDir(monthDir, { recursive: true });
+        await invoke('create_dir_recursive', { path: receiptsDir });
+        await invoke('create_dir_recursive', { path: monthDir });
       }
       
-      const filePath = await window.__TAURI__.path.join(monthDir, filename);
+      const filePath = `${monthDir}/${filename}`;
       console.log('Writing PDF to:', filePath);
       
-      await window.__TAURI__.fs.writeFile(filePath, pdfBytes);
+      // Convert Uint8Array to regular array for JSON serialization
+      const pdfArray = Array.from(pdfBytes);
+      await invoke('write_file_binary', { path: filePath, contents: pdfArray });
       console.log('PDF saved successfully to:', filePath);
       
       return filePath;
