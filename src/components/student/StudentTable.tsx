@@ -10,13 +10,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { studentDb } from '@/lib/database';
 import { Student } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Edit, Trash2, Users, Eye, Download, FileSpreadsheet, QrCode, MessageSquare, FileText } from 'lucide-react';
+import { Search, Edit, Trash2, Users, Eye, Download, FileSpreadsheet, QrCode, MessageSquare } from 'lucide-react';
 import { StudentEditForm } from './StudentEditForm';
 import { StudentProfileModal } from './StudentProfileModal';
 import { StudentQRGenerator } from './StudentQRGenerator';
 import { exportAllStudentsCSV, exportMultipleStudentsPDF } from '@/utils/exportUtils';
-import { WhatsAppDesktopIntegration } from '../whatsapp/WhatsAppDesktopIntegration';
-import { FeeReceiptModal } from './FeeReceiptModal';
+import { WhatsAppIntegration } from '../whatsapp/WhatsAppIntegration';
 
 interface StudentTableProps {
   refreshTrigger: number;
@@ -34,7 +33,6 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
   const [isQrDialogOpen, setIsQrDialogOpen] = useState(false);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [showWhatsApp, setShowWhatsApp] = useState(false);
-  const [selectedStudentForReceipt, setSelectedStudentForReceipt] = useState<Student | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -303,31 +301,23 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                           <Button
-                             variant="ghost"
-                             size="sm"
-                             onClick={() => handleShowQR(student)}
-                             title="Generate QR Code"
-                           >
-                             <QrCode className="h-4 w-4" />
-                           </Button>
-                           <Button
-                             variant="ghost"
-                             size="sm"
-                             onClick={() => setSelectedStudentForReceipt(student)}
-                             title="Generate Receipt"
-                           >
-                             <FileText className="h-4 w-4" />
-                           </Button>
-                           <Button
-                             variant="ghost"
-                             size="sm"
-                             onClick={() => handleDelete(student)}
-                             className="text-destructive hover:text-destructive"
-                             title="Delete Student"
-                           >
-                             <Trash2 className="h-4 w-4" />
-                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleShowQR(student)}
+                            title="Generate QR Code"
+                          >
+                            <QrCode className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(student)}
+                            className="text-destructive hover:text-destructive"
+                            title="Delete Student"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -390,18 +380,12 @@ export const StudentTable = ({ refreshTrigger, onStudentUpdated }: StudentTableP
                 Send personalized messages to students via WhatsApp
               </DialogDescription>
             </DialogHeader>
-            <WhatsAppDesktopIntegration 
+            <WhatsAppIntegration 
               students={students}
               selectedStudents={students.filter(s => selectedStudents.has(s.id))}
             />
           </DialogContent>
         </Dialog>
-
-        <FeeReceiptModal 
-          student={selectedStudentForReceipt}
-          open={!!selectedStudentForReceipt}
-          onClose={() => setSelectedStudentForReceipt(null)}
-        />
       </CardContent>
     </Card>
   );
