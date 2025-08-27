@@ -2,6 +2,8 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AnimatedBackground } from '@/components/scenic/AnimatedBackground';
 import { GlassNavigation } from './GlassNavigation';
+import { CherryBlossomParticles } from '@/components/particles/CherryBlossomParticles';
+import { AmbientSoundControl } from '@/components/ambient/AmbientSoundControl';
 
 interface GlassLayoutProps {
   children: React.ReactNode;
@@ -36,6 +38,9 @@ export const GlassLayout: React.FC<GlassLayoutProps> = ({ children }) => {
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated Scenic Background */}
       <AnimatedBackground />
+      
+      {/* Cherry Blossom Particles */}
+      <CherryBlossomParticles />
       
       {/* Main Layout Container */}
       <motion.div
@@ -139,6 +144,9 @@ export const GlassLayout: React.FC<GlassLayoutProps> = ({ children }) => {
             />
           ))}
         </div>
+
+        {/* Ambient Sound Controls */}
+        <AmbientSoundControl />
       </motion.div>
     </div>
   );

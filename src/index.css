@@ -227,6 +227,19 @@ All colors MUST be HSL. Scenic background with cherry blossom & mountain theme.
     animation: float 8s ease-in-out infinite 1s;
   }
 
+  /* Particle Effects */
+  .particles {
+    animation: particles 10s linear infinite;
+  }
+
+  .shimmer {
+    animation: shimmer 2s ease-in-out infinite;
+  }
+
+  .ripple {
+    animation: ripple 0.6s ease-out;
+  }
+
   /* Text Gradients */
   .text-gradient-sunset {
     @apply bg-gradient-to-r from-[hsl(var(--primary))] to-[hsl(var(--primary-glow))]
