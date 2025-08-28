@@ -162,6 +162,25 @@ export default {
 						transform: 'scale(2)',
 						opacity: '0'
 					}
+				},
+				'ken-burns': {
+					'0%': {
+						transform: 'scale(1) translateX(0)'
+					},
+					'50%': {
+						transform: 'scale(1.1) translateX(-2%)'
+					},
+					'100%': {
+						transform: 'scale(1) translateX(0)'
+					}
+				},
+				'particles': {
+					'0%': {
+						transform: 'translateY(100vh) rotate(0deg)'
+					},
+					'100%': {
+						transform: 'translateY(-100vh) rotate(360deg)'
+					}
 				}
 			},
 			animation: {
@@ -174,7 +193,9 @@ export default {
 				'float': 'float 6s ease-in-out infinite',
 				'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
 				'shimmer': 'shimmer 2s linear infinite',
-				'ripple': 'ripple 0.6s linear'
+				'ripple': 'ripple 0.6s linear',
+				'ken-burns': 'ken-burns 20s ease-in-out infinite',
+				'particles': 'particles 10s linear infinite'
 			}
 		}
 	},

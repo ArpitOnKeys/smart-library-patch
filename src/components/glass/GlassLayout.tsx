@@ -35,7 +35,7 @@ const itemVariants = {
 
 export const GlassLayout: React.FC<GlassLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen relative overflow-hidden bg-transparent">
       {/* Animated Scenic Background */}
       <AnimatedBackground />
       
@@ -44,7 +44,7 @@ export const GlassLayout: React.FC<GlassLayoutProps> = ({ children }) => {
       
       {/* Main Layout Container */}
       <motion.div
-        className="relative z-10 min-h-screen"
+        className="relative z-20 min-h-screen"
         variants={containerVariants}
         initial="hidden"
         animate="visible"

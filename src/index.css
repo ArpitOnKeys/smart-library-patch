@@ -255,4 +255,37 @@ All colors MUST be HSL. Scenic background with cherry blossom & mountain theme.
     @apply bg-gradient-to-r from-[hsl(var(--accent))] to-[hsl(var(--accent-glow))]
            bg-clip-text text-transparent;
   }
+
+  /* Animation keyframes */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  
+  @keyframes ripple {
+    0% {
+      transform: scale(0);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(4);
+      opacity: 0;
+    }
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(1deg); }
+  }
+  
+  @keyframes ken-burns {
+    0% { transform: scale(1) translateX(0); }
+    50% { transform: scale(1.1) translateX(-2%); }
+    100% { transform: scale(1) translateX(0); }
+  }
+
+  @keyframes particles {
+    0% { transform: translateY(100vh) rotate(0deg); }
+    100% { transform: translateY(-100vh) rotate(360deg); }
+  }
 }
