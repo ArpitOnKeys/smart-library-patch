@@ -10,83 +10,123 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 240 10% 98%;
-    --foreground: 240 10% 9%;
+    /* Natural Color Palette Inspired by Scenic Mountains & River */
+    --background: 210 40% 98%;
+    --foreground: 220 20% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 9%;
+    /* Glass Cards - Light frosted effect */
+    --card: 0 0% 100%/80%;
+    --card-foreground: 220 20% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 9%;
+    --popover: 0 0% 100%/95%;
+    --popover-foreground: 220 20% 15%;
 
-    --primary: 220 70% 50%;
+    /* Primary: Sky Blue / River Blue */
+    --primary: 200 85% 55%;
+    --primary-glow: 200 85% 70%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220 8.9% 46.1%;
+    /* Secondary: Soft Green from Flora */
+    --secondary: 120 40% 85%;
+    --secondary-foreground: 120 30% 25%;
 
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
+    /* Muted: Mountain Mist */
+    --muted: 210 20% 92%;
+    --muted-foreground: 210 15% 45%;
 
-    --accent: 220 14.3% 95.9%;
-    --accent-foreground: 220 8.9% 46.1%;
+    /* Accent: Blossom Pink */
+    --accent: 330 65% 88%;
+    --accent-foreground: 330 40% 25%;
+
+    /* Golden Sunset Highlights */
+    --golden: 45 85% 65%;
+    --golden-foreground: 45 60% 15%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 220 70% 50%;
+    /* Glass Effects */
+    --border: 220 20% 85%/50%;
+    --input: 220 15% 90%/70%;
+    --ring: 200 85% 55%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    --sidebar-background: 240 10% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 220 70% 50%;
+    /* Sidebar Glass */
+    --sidebar-background: 210 40% 98%/85%;
+    --sidebar-foreground: 220 20% 20%;
+    --sidebar-primary: 200 85% 55%;
     --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 220 14.3% 95.9%;
-    --sidebar-accent-foreground: 220 8.9% 46.1%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 220 70% 50%;
+    --sidebar-accent: 210 20% 92%/60%;
+    --sidebar-accent-foreground: 220 20% 25%;
+    --sidebar-border: 220 20% 85%/40%;
+    --sidebar-ring: 200 85% 55%;
+
+    /* Atmospheric Effects */
+    --light-ray: 45 85% 75%/30%;
+    --mist: 210 30% 95%/20%;
+    --glow-blue: 200 85% 55%/40%;
+    --glow-pink: 330 65% 75%/40%;
+    --glow-golden: 45 85% 65%/40%;
   }
 
   .dark {
-    --background: 240 10% 4%;
-    --foreground: 0 0% 95%;
+    /* Dark Mode - Night Mountain Scene */
+    --background: 220 30% 8%;
+    --foreground: 210 20% 92%;
 
-    --card: 240 10% 6%;
-    --card-foreground: 0 0% 95%;
+    /* Dark Glass Cards */
+    --card: 220 25% 12%/80%;
+    --card-foreground: 210 20% 92%;
 
-    --popover: 240 10% 6%;
-    --popover-foreground: 0 0% 95%;
+    --popover: 220 25% 10%/95%;
+    --popover-foreground: 210 20% 92%;
 
-    --primary: 220 70% 60%;
-    --primary-foreground: 240 10% 4%;
+    /* Primary: Moonlit Blue */
+    --primary: 200 75% 65%;
+    --primary-glow: 200 85% 80%;
+    --primary-foreground: 220 30% 8%;
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 95%;
+    /* Secondary: Dark Forest Green */
+    --secondary: 120 25% 20%;
+    --secondary-foreground: 120 20% 85%;
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    /* Muted: Night Mist */
+    --muted: 220 20% 15%;
+    --muted-foreground: 220 15% 65%;
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 95%;
+    /* Accent: Night Blossom */
+    --accent: 330 40% 25%;
+    --accent-foreground: 330 30% 85%;
+
+    /* Golden Moonlight */
+    --golden: 45 60% 55%;
+    --golden-foreground: 45 40% 85%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 95%;
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 220 70% 60%;
+    /* Dark Glass Effects */
+    --border: 220 25% 25%/50%;
+    --input: 220 25% 18%/70%;
+    --ring: 200 75% 65%;
 
-    --sidebar-background: 240 10% 4%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 220 70% 60%;
-    --sidebar-primary-foreground: 240 10% 4%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 220 70% 60%;
+    /* Dark Sidebar Glass */
+    --sidebar-background: 220 30% 8%/85%;
+    --sidebar-foreground: 210 20% 85%;
+    --sidebar-primary: 200 75% 65%;
+    --sidebar-primary-foreground: 220 30% 8%;
+    --sidebar-accent: 220 20% 15%/60%;
+    --sidebar-accent-foreground: 220 15% 80%;
+    --sidebar-border: 220 25% 25%/40%;
+    --sidebar-ring: 200 75% 65%;
+
+    /* Dark Atmospheric Effects */
+    --light-ray: 45 60% 55%/20%;
+    --mist: 220 25% 15%/15%;
+    --glow-blue: 200 75% 65%/30%;
+    --glow-pink: 330 50% 65%/30%;
+    --glow-golden: 45 60% 55%/30%;
   }
 }
 
@@ -101,23 +141,197 @@ All colors MUST be HSL.
 }
 
 @layer components {
+  /* Scenic Background System */
+  .scenic-background {
+    @apply fixed inset-0 bg-cover bg-center bg-no-repeat;
+    background-image: url('/src/assets/scenic-background.jpg');
+    z-index: -2;
+  }
+
+  .scenic-overlay {
+    @apply fixed inset-0 pointer-events-none;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--light-ray)) 0%,
+      transparent 30%,
+      transparent 70%,
+      hsl(var(--mist)) 100%
+    );
+    z-index: -1;
+  }
+
+  /* Liquid Glass System */
+  .liquid-glass {
+    @apply backdrop-blur-xl border border-border/30 rounded-2xl shadow-2xl;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--card))/60% 100%
+    );
+    box-shadow: 
+      0 8px 32px hsl(var(--glow-blue)),
+      inset 0 1px 0 hsl(var(--border)),
+      0 0 0 1px hsl(var(--border))/20%;
+  }
+
+  .liquid-glass-nav {
+    @apply backdrop-blur-2xl border-b border-border/20;
+    background: linear-gradient(
+      180deg,
+      hsl(var(--card)) 0%,
+      hsl(var(--card))/80% 100%
+    );
+    box-shadow: 
+      0 4px 24px hsl(var(--glow-blue))/50%,
+      inset 0 1px 0 hsl(var(--border))/50%;
+  }
+
+  .liquid-glass-panel {
+    @apply backdrop-blur-2xl border border-border/20 rounded-3xl;
+    background: linear-gradient(
+      145deg,
+      hsl(var(--card))/90% 0%,
+      hsl(var(--card))/70% 50%,
+      hsl(var(--card))/85% 100%
+    );
+    box-shadow: 
+      0 12px 40px hsl(var(--glow-blue))/30%,
+      0 4px 12px hsl(var(--glow-pink))/20%,
+      inset 0 1px 0 hsl(var(--border))/60%,
+      inset 0 -1px 0 hsl(var(--border))/30%;
+  }
+
+  /* Brand Elements */
   .brand-gradient {
-    @apply bg-gradient-to-r from-indigo-500 to-purple-600;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary-glow)) 50%,
+      hsl(var(--accent)) 100%
+    );
+    box-shadow: 0 4px 16px hsl(var(--glow-blue))/60%;
   }
 
-  .glass-effect {
-    @apply backdrop-blur-md bg-white/80 border border-white/20;
+  .brand-glow {
+    box-shadow: 
+      0 0 20px hsl(var(--glow-blue)),
+      0 0 40px hsl(var(--glow-pink))/50%,
+      0 0 60px hsl(var(--glow-golden))/30%;
   }
 
-  .card-enhanced {
-    @apply bg-card border border-border rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300;
+  /* Enhanced Interactions */
+  .button-liquid {
+    @apply relative overflow-hidden transition-all duration-300 ease-out;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--primary))/90% 0%,
+      hsl(var(--primary)) 50%,
+      hsl(var(--primary-glow)) 100%
+    );
+    box-shadow: 
+      0 4px 16px hsl(var(--glow-blue))/40%,
+      inset 0 1px 0 hsl(var(--primary-foreground))/20%;
   }
 
-  .button-enhanced {
-    @apply transition-all duration-200 hover:scale-105 active:scale-95;
+  .button-liquid:hover {
+    transform: translateY(-2px);
+    box-shadow: 
+      0 8px 24px hsl(var(--glow-blue))/60%,
+      0 4px 12px hsl(var(--glow-pink))/30%,
+      inset 0 1px 0 hsl(var(--primary-foreground))/30%;
   }
 
-  .table-enhanced {
-    @apply even:bg-muted/30 hover:bg-muted/50 transition-colors duration-200;
+  .button-liquid::before {
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    content: '';
+    background: radial-gradient(
+      circle at center,
+      hsl(var(--primary-foreground))/20% 0%,
+      transparent 70%
+    );
+  }
+
+  .button-liquid:hover::before {
+    @apply opacity-100;
+  }
+
+  /* Ripple Effect */
+  .ripple-effect {
+    @apply relative overflow-hidden;
+  }
+
+  .ripple-effect::after {
+    @apply absolute inset-0 opacity-0 pointer-events-none;
+    content: '';
+    background: radial-gradient(
+      circle at var(--x, 50%) var(--y, 50%),
+      hsl(var(--primary-foreground))/30% 0%,
+      transparent 50%
+    );
+    transform: scale(0);
+    transition: transform 0.5s ease-out, opacity 0.3s ease-out;
+  }
+
+  .ripple-effect:active::after {
+    transform: scale(2);
+    opacity: 1;
+    transition: transform 0s, opacity 0s;
+  }
+
+  /* Table Enhancements */
+  .table-liquid {
+    @apply even:bg-muted/20 hover:bg-gradient-to-r hover:from-glow-blue/10 hover:to-glow-pink/10;
+    transition: all 0.3s ease-out;
+    backdrop-filter: blur(8px);
+  }
+
+  .table-liquid:hover {
+    box-shadow: 
+      0 2px 8px hsl(var(--glow-blue))/20%,
+      inset 0 1px 0 hsl(var(--border))/40%;
+  }
+
+  /* Card Enhancements */
+  .card-liquid {
+    @apply liquid-glass-panel transition-all duration-500 ease-out;
+  }
+
+  .card-liquid:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 
+      0 20px 60px hsl(var(--glow-blue))/40%,
+      0 8px 24px hsl(var(--glow-pink))/30%,
+      0 4px 12px hsl(var(--glow-golden))/20%,
+      inset 0 1px 0 hsl(var(--border))/70%,
+      inset 0 -1px 0 hsl(var(--border))/40%;
+  }
+
+  /* Floating Elements */
+  .floating-element {
+    @apply absolute pointer-events-none opacity-60;
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    25% { transform: translateY(-10px) rotate(1deg); }
+    50% { transform: translateY(-20px) rotate(0deg); }
+    75% { transform: translateY(-10px) rotate(-1deg); }
+  }
+
+  /* Parallax Layers */
+  .parallax-bg {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .parallax-mg {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .parallax-fg {
+    transform: translateZ(0);
+    will-change: transform;
   }
 }
