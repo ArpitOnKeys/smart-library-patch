@@ -32,21 +32,24 @@ const Index = () => {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3,
+        staggerChildren: 0.08,
+        delayChildren: 0.1,
+        duration: 0.6,
       },
     },
   };
 
   const itemVariants = {
-    hidden: { y: 30, opacity: 0 },
+    hidden: { y: 20, opacity: 0, scale: 0.95 },
     visible: {
       y: 0,
       opacity: 1,
+      scale: 1,
       transition: {
         type: "spring" as const,
-        stiffness: 100,
-        damping: 12,
+        stiffness: 400,
+        damping: 25,
+        mass: 0.8,
       },
     },
   };

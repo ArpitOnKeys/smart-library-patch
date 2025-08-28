@@ -27,18 +27,20 @@ export const LiquidGlassCard: React.FC<LiquidGlassCardProps> = ({
     rest: {
       scale: 1,
       y: 0,
-      boxShadow: '0 8px 32px hsl(var(--glow-blue) / 0.3)',
+      boxShadow: '0 12px 40px hsl(var(--glow-blue) / 0.25)',
+      filter: 'brightness(1)',
     },
     hover: {
-      scale: hover ? 1.02 : 1,
-      y: hover ? -4 : 0,
+      scale: hover ? 1.03 : 1,
+      y: hover ? -6 : 0,
       boxShadow: hover
-        ? '0 20px 60px hsl(var(--glow-blue) / 0.4), 0 8px 24px hsl(var(--glow-pink) / 0.3)'
-        : '0 8px 32px hsl(var(--glow-blue) / 0.3)',
+        ? '0 32px 80px hsl(var(--glow-blue) / 0.4), 0 16px 40px hsl(var(--glow-pink) / 0.3), 0 8px 20px hsl(var(--glow-golden) / 0.2)'
+        : '0 12px 40px hsl(var(--glow-blue) / 0.25)',
+      filter: hover ? 'brightness(1.05)' : 'brightness(1)',
     },
     tap: {
-      scale: 0.98,
-      y: 0,
+      scale: 0.97,
+      y: -2,
     },
   };
 
@@ -52,8 +54,9 @@ export const LiquidGlassCard: React.FC<LiquidGlassCardProps> = ({
       onClick={onClick}
       transition={{
         type: "spring",
-        stiffness: 400,
-        damping: 25,
+        stiffness: 600,
+        damping: 30,
+        mass: 0.8,
       }}
     >
       {children}

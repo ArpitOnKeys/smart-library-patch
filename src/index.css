@@ -154,11 +154,14 @@ All colors MUST be HSL.
 }
 
 @layer components {
-  /* Scenic Background System */
+  /* Scenic Background System - GPU Accelerated */
   .scenic-background {
     @apply fixed inset-0 bg-cover bg-center bg-no-repeat;
     background-image: url('/src/assets/scenic-background.jpg');
     z-index: -2;
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
   }
 
   .scenic-overlay {
@@ -171,53 +174,66 @@ All colors MUST be HSL.
       hsl(var(--mist)) 100%
     );
     z-index: -1;
+    transform: translateZ(0);
+    will-change: transform;
   }
 
-  /* Enhanced Liquid Glass System with Better Typography */
+  /* Enhanced Liquid Glass System - Premium Performance */
   .liquid-glass {
-    @apply backdrop-blur-xl border border-border/35 rounded-2xl shadow-2xl;
+    @apply backdrop-blur-xl border border-border/40 rounded-2xl shadow-2xl;
     background: linear-gradient(
       135deg,
       hsl(var(--card)) 0%,
-      hsl(var(--card))/65% 100%
+      hsl(var(--card))/75% 100%
     );
     box-shadow: 
-      0 8px 32px hsl(var(--glow-blue)),
-      inset 0 2px 0 hsl(var(--border)),
-      0 0 0 1px hsl(var(--border))/25%;
+      0 12px 48px hsl(var(--glow-blue))/50%,
+      0 4px 16px hsl(var(--glow-pink))/30%,
+      inset 0 2px 0 hsl(var(--border))/80%,
+      0 0 0 1px hsl(var(--border))/40%;
     color: hsl(var(--glass-text-contrast));
-    text-shadow: var(--text-shadow-light);
+    text-shadow: var(--text-shadow-strong);
+    transform: translateZ(0);
+    will-change: transform, box-shadow;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .liquid-glass-nav {
-    @apply backdrop-blur-2xl border-b border-border/25;
+    @apply backdrop-blur-2xl border-b border-border/30;
     background: linear-gradient(
       180deg,
-      hsl(var(--card)) 0%,
-      hsl(var(--card))/85% 100%
-    );
-    box-shadow: 
-      0 4px 24px hsl(var(--glow-blue))/60%,
-      inset 0 2px 0 hsl(var(--border))/60%;
-    color: hsl(var(--glass-text-contrast));
-    text-shadow: var(--text-shadow-light);
-  }
-
-  .liquid-glass-panel {
-    @apply backdrop-blur-2xl border border-border/25 rounded-3xl;
-    background: linear-gradient(
-      145deg,
       hsl(var(--card))/95% 0%,
-      hsl(var(--card))/75% 50%,
       hsl(var(--card))/90% 100%
     );
     box-shadow: 
-      0 12px 40px hsl(var(--glow-blue))/35%,
-      0 4px 12px hsl(var(--glow-pink))/25%,
-      inset 0 2px 0 hsl(var(--border))/70%,
-      inset 0 -2px 0 hsl(var(--border))/35%;
+      0 8px 32px hsl(var(--glow-blue))/40%,
+      0 2px 8px hsl(var(--glow-pink))/20%,
+      inset 0 2px 0 hsl(var(--border))/70%;
     color: hsl(var(--glass-text-contrast));
-    text-shadow: var(--text-shadow-light);
+    text-shadow: var(--text-shadow-strong);
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .liquid-glass-panel {
+    @apply backdrop-blur-2xl border border-border/30 rounded-3xl;
+    background: linear-gradient(
+      145deg,
+      hsl(var(--card))/98% 0%,
+      hsl(var(--card))/82% 50%,
+      hsl(var(--card))/95% 100%
+    );
+    box-shadow: 
+      0 20px 60px hsl(var(--glow-blue))/30%,
+      0 8px 24px hsl(var(--glow-pink))/20%,
+      0 4px 12px hsl(var(--glow-golden))/15%,
+      inset 0 2px 0 hsl(var(--border))/80%,
+      inset 0 -2px 0 hsl(var(--border))/40%;
+    color: hsl(var(--glass-text-contrast));
+    text-shadow: var(--text-shadow-strong);
+    transform: translateZ(0);
+    will-change: transform, box-shadow;
+    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   /* Brand Elements */
@@ -238,29 +254,36 @@ All colors MUST be HSL.
       0 0 60px hsl(var(--glow-golden))/30%;
   }
 
-  /* Enhanced Button Interactions with Better Typography */
+  /* Premium Button Interactions - Instant Response */
   .button-liquid {
-    @apply relative overflow-hidden transition-all duration-300 ease-out font-semibold;
+    @apply relative overflow-hidden font-bold tracking-wide;
     background: linear-gradient(
       135deg,
-      hsl(var(--primary))/95% 0%,
-      hsl(var(--primary)) 50%,
+      hsl(var(--primary))/98% 0%,
+      hsl(var(--primary)) 40%,
       hsl(var(--primary-glow)) 100%
     );
     box-shadow: 
-      0 4px 16px hsl(var(--glow-blue))/50%,
-      inset 0 2px 0 hsl(var(--primary-foreground))/25%;
+      0 8px 24px hsl(var(--glow-blue))/40%,
+      0 2px 8px hsl(var(--glow-pink))/25%,
+      inset 0 2px 0 hsl(var(--primary-foreground))/30%;
     color: hsl(var(--primary-foreground));
-    text-shadow: var(--text-shadow-strong);
+    text-shadow: var(--text-glow) hsl(var(--primary-foreground))/40%;
+    transform: translateZ(0);
+    will-change: transform, box-shadow;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .button-liquid:hover {
-    transform: translateY(-2px) scale(1.02);
+    transform: translateY(-3px) scale(1.03);
     box-shadow: 
-      0 8px 24px hsl(var(--glow-blue))/70%,
-      0 4px 12px hsl(var(--glow-pink))/40%,
-      inset 0 2px 0 hsl(var(--primary-foreground))/35%;
-    text-shadow: var(--text-glow) hsl(var(--primary-foreground))/50%;
+      0 16px 48px hsl(var(--glow-blue))/60%,
+      0 8px 24px hsl(var(--glow-pink))/40%,
+      0 4px 12px hsl(var(--glow-golden))/30%,
+      inset 0 2px 0 hsl(var(--primary-foreground))/40%;
+    text-shadow: 
+      var(--text-glow) hsl(var(--primary-foreground))/60%,
+      0 0 30px hsl(var(--primary-glow))/80%;
   }
 
   .button-liquid::before {
@@ -313,53 +336,67 @@ All colors MUST be HSL.
       inset 0 1px 0 hsl(var(--border))/40%;
   }
 
-  /* Card Enhancements */
+  /* Premium Card Interactions */
   .card-liquid {
-    @apply liquid-glass-panel transition-all duration-500 ease-out;
+    @apply liquid-glass-panel;
+    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+    transform: translateZ(0);
+    will-change: transform, box-shadow;
   }
 
   .card-liquid:hover {
-    transform: translateY(-4px) scale(1.02);
+    transform: translateY(-6px) scale(1.02);
     box-shadow: 
-      0 20px 60px hsl(var(--glow-blue))/40%,
-      0 8px 24px hsl(var(--glow-pink))/30%,
-      0 4px 12px hsl(var(--glow-golden))/20%,
-      inset 0 1px 0 hsl(var(--border))/70%,
-      inset 0 -1px 0 hsl(var(--border))/40%;
+      0 32px 80px hsl(var(--glow-blue))/35%,
+      0 16px 40px hsl(var(--glow-pink))/25%,
+      0 8px 20px hsl(var(--glow-golden))/20%,
+      inset 0 2px 0 hsl(var(--border))/80%,
+      inset 0 -2px 0 hsl(var(--border))/50%;
   }
 
-  /* Enhanced Typography Classes */
+  /* Premium Typography System */
   .text-glass-primary {
     color: hsl(var(--glass-text-contrast));
-    text-shadow: var(--text-shadow-light);
+    text-shadow: 
+      var(--text-shadow-strong),
+      0 0 10px hsl(var(--glass-text-contrast))/20%;
     font-weight: 700;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
   }
 
   .text-glass-secondary {
     color: hsl(var(--glass-text-muted));
-    text-shadow: var(--text-shadow-light);
+    text-shadow: var(--text-shadow-strong);
     font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
   .text-glass-glow {
     color: hsl(var(--primary));
-    text-shadow: var(--text-glow) hsl(var(--primary))/40%;
-    font-weight: 700;
+    text-shadow: 
+      var(--text-glow) hsl(var(--primary))/50%,
+      0 0 20px hsl(var(--primary-glow))/60%,
+      0 0 40px hsl(var(--primary))/30%;
+    font-weight: 800;
+    letter-spacing: -0.025em;
   }
 
   .heading-glass {
     color: hsl(var(--glass-text-contrast));
-    text-shadow: var(--text-shadow-strong);
-    font-weight: 800;
-    letter-spacing: -0.05em;
+    text-shadow: 
+      var(--text-shadow-strong),
+      0 0 15px hsl(var(--glass-text-contrast))/25%;
+    font-weight: 900;
+    letter-spacing: -0.04em;
   }
 
   .label-glass {
     color: hsl(var(--glass-text-contrast));
-    text-shadow: var(--text-shadow-light);
-    font-weight: 600;
+    text-shadow: var(--text-shadow-strong);
+    font-weight: 700;
     font-size: 0.875rem;
+    letter-spacing: 0.025em;
+    text-transform: uppercase;
   }
 
   /* Enhanced Floating Elements */

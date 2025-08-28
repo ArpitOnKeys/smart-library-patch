@@ -54,14 +54,18 @@ export const LiquidButton: React.FC<LiquidButtonProps> = ({
     rest: {
       scale: 1,
       y: 0,
+      boxShadow: '0 4px 16px hsl(var(--glow-blue) / 0.3)',
+      filter: 'brightness(1)',
     },
     hover: {
-      scale: 1.05,
-      y: -2,
+      scale: 1.06,
+      y: -3,
+      boxShadow: '0 16px 48px hsl(var(--glow-blue) / 0.5), 0 8px 24px hsl(var(--glow-pink) / 0.4)',
+      filter: 'brightness(1.1)',
     },
     tap: {
-      scale: 0.95,
-      y: 0,
+      scale: 0.94,
+      y: -1,
     },
   };
 
@@ -83,8 +87,9 @@ export const LiquidButton: React.FC<LiquidButtonProps> = ({
       disabled={disabled}
       transition={{
         type: "spring",
-        stiffness: 400,
-        damping: 25,
+        stiffness: 800,
+        damping: 35,
+        mass: 0.6,
       }}
     >
       <span className="relative z-10">{children}</span>
