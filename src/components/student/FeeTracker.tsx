@@ -28,11 +28,6 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
   const [paymentMonth, setPaymentMonth] = useState('');
   const [paymentYear, setPaymentYear] = useState(new Date().getFullYear().toString());
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [whatsappModal, setWhatsappModal] = useState<{ isOpen: boolean; student: Student | null; message: string }>({
-    isOpen: false,
-    student: null,
-    message: ''
-  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -201,10 +196,33 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
     
     const message = `Hello! Fee receipt for ${selectedStudent.name}:\n\nAmount: ₹${payment.amount}\nMonth: ${payment.month} ${payment.year}\nSeat: ${selectedStudent.seatNumber}\n\nTotal Due: ₹${calculateTotalDue()}\n\nThank you!\n- PATCH Library`;
     
-    setWhatsappModal({
-      isOpen: true,
-      student: selectedStudent,
-      message
+    const cleanedPhone = selectedStudent.contact.replace(/\D/g, '');
+    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Try multiple automatic methods
+    const methods = [
+      () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
+      () => window.location.href = `intent://send?phone=${phoneNumber}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`,
+      () => window.open(`https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank'),
+      () => window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_self')
+    ];
+
+    let success = false;
+    for (let i = 0; i < methods.length; i++) {
+      try {
+        methods[i]();
+        success = true;
+        break;
+      } catch (error) {
+        if (i === methods.length - 1) console.error('All WhatsApp methods failed:', error);
+      }
+    }
+
+    toast({
+      title: success ? 'WhatsApp Opened' : 'Install WhatsApp',
+      description: success ? 'Fee receipt message sent successfully.' : 'Please install WhatsApp to send messages.',
+      variant: success ? 'default' : 'destructive'
     });
   };
 
@@ -401,16 +419,6 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
           </div>
         </CardContent>
       </Card>
-
-      {/* WhatsApp Modal */}
-      {whatsappModal.student && (
-        <WhatsAppModal
-          isOpen={whatsappModal.isOpen}
-          onClose={() => setWhatsappModal({ isOpen: false, student: null, message: '' })}
-          student={whatsappModal.student}
-          message={whatsappModal.message}
-        />
-      )}
     </div>
   );
 };

@@ -33,11 +33,6 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedShift, setSelectedShift] = useState<string>('all');
   const [showOnlyDue, setShowOnlyDue] = useState(false);
-  const [whatsappModal, setWhatsappModal] = useState<{ isOpen: boolean; student: Student | null; message: string }>({
-    isOpen: false,
-    student: null,
-    message: ''
-  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -110,6 +105,10 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
     const currentMonth = format(new Date(), 'MMMM yyyy');
     const message = `Dear ${student.name}, your fee of ₹${student.totalDue} for ${currentMonth} is due. Please pay soon. - PATCH Library`;
     
+    const cleanedPhone = student.contact.replace(/\D/g, '');
+    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+    const encodedMessage = encodeURIComponent(message);
+    
     try {
       // Log the reminder attempt
       const { storage } = await import('@/lib/database');
@@ -126,11 +125,29 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
       logs.push(newLog);
       storage.set('patch_whatsapp_logs', logs);
       
-      // Open WhatsApp modal
-      setWhatsappModal({
-        isOpen: true,
-        student,
-        message
+      // Try multiple automatic methods
+      const methods = [
+        () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
+        () => window.location.href = `intent://send?phone=${phoneNumber}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`,
+        () => window.open(`https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank'),
+        () => window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_self')
+      ];
+
+      let success = false;
+      for (let i = 0; i < methods.length; i++) {
+        try {
+          methods[i]();
+          success = true;
+          break;
+        } catch (error) {
+          if (i === methods.length - 1) console.error('All WhatsApp methods failed:', error);
+        }
+      }
+
+      toast({
+        title: success ? 'WhatsApp Opened' : 'Install WhatsApp',
+        description: success ? `Reminder sent to ${student.name}` : 'Please install WhatsApp to send reminders.',
+        variant: success ? 'default' : 'destructive'
       });
       
       onReminderSent();
@@ -274,16 +291,6 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
           </div>
         </CardContent>
       </Card>
-
-      {/* WhatsApp Modal */}
-      {whatsappModal.student && (
-        <WhatsAppModal
-          isOpen={whatsappModal.isOpen}
-          onClose={() => setWhatsappModal({ isOpen: false, student: null, message: '' })}
-          student={whatsappModal.student}
-          message={whatsappModal.message}
-        />
-      )}
     </div>
   );
 };

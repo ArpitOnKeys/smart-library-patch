@@ -65,11 +65,6 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   const [newTemplate, setNewTemplate] = useState({ name: '', content: '' });
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
-  const [whatsappModal, setWhatsappModal] = useState<{ isOpen: boolean; student: Student | null; message: string }>({
-    isOpen: false,
-    student: null,
-    message: ''
-  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -123,12 +118,57 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   };
 
   const sendWhatsAppMessage = async (student: Student, message: string) => {
-    // Open modal for manual sending
-    setWhatsappModal({
-      isOpen: true,
-      student,
-      message
-    });
+    const cleanedPhone = cleanPhoneNumber(student.contact);
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Try multiple methods in sequence for maximum compatibility
+    const methods = [
+      // Method 1: WhatsApp protocol (works with WhatsApp desktop app)
+      () => {
+        window.location.href = `whatsapp://send?phone=${cleanedPhone}&text=${encodedMessage}`;
+        return true;
+      },
+      // Method 2: Intent-based URL for mobile devices
+      () => {
+        window.location.href = `intent://send?phone=${cleanedPhone}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`;
+        return true;
+      },
+      // Method 3: Custom URL scheme
+      () => {
+        const link = document.createElement('a');
+        link.href = `whatsapp://send/?phone=${cleanedPhone}&text=${encodedMessage}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return true;
+      },
+      // Method 4: Alternative wa.me format
+      () => {
+        window.open(`https://web.whatsapp.com/send/?phone=${cleanedPhone}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank', 'noopener,noreferrer');
+        return true;
+      }
+    ];
+
+    let success = false;
+    for (let i = 0; i < methods.length; i++) {
+      try {
+        methods[i]();
+        success = true;
+        console.log(`WhatsApp opened successfully using method ${i + 1}`);
+        break;
+      } catch (error) {
+        console.log(`Method ${i + 1} failed, trying next...`);
+        if (i === methods.length - 1) {
+          // Final fallback: try basic window.open
+          try {
+            window.open(`https://wa.me/${cleanedPhone}?text=${encodedMessage}`, '_self');
+            success = true;
+          } catch (finalError) {
+            console.error('All methods failed:', finalError);
+          }
+        }
+      }
+    }
 
     // Log the message attempt
     const log: WhatsAppLog = {
@@ -138,11 +178,17 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
       phoneNumber: student.contact,
       message,
       timestamp: new Date().toISOString(),
-      status: 'sent'
+      status: success ? 'sent' : 'failed'
     };
 
     const newLogs = [log, ...logs];
     saveLogs(newLogs);
+
+    toast({
+      title: success ? "WhatsApp Opened" : "Please Install WhatsApp",
+      description: success ? `Message sent to ${student.name}` : `Install WhatsApp app to send message to ${student.name}`,
+      variant: success ? "default" : "destructive"
+    });
 
     if (onSingleMessage) {
       onSingleMessage(student);
@@ -434,16 +480,6 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
           </div>
         </CardContent>
       </Card>
-
-      {/* WhatsApp Modal */}
-      {whatsappModal.student && (
-        <WhatsAppModal
-          isOpen={whatsappModal.isOpen}
-          onClose={() => setWhatsappModal({ isOpen: false, student: null, message: '' })}
-          student={whatsappModal.student}
-          message={whatsappModal.message}
-        />
-      )}
     </div>
   );
 };
