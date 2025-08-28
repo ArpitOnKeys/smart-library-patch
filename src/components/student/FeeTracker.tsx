@@ -190,18 +190,50 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
     });
   };
 
-  const sendWhatsAppMessage = (payment: FeePayment) => {
+  const sendWhatsAppMessage = async (payment: FeePayment) => {
     if (!selectedStudent) return;
     
     const message = `Hello! Fee receipt for ${selectedStudent.name}:\n\nAmount: ₹${payment.amount}\nMonth: ${payment.month} ${payment.year}\nSeat: ${selectedStudent.seatNumber}\n\nTotal Due: ₹${calculateTotalDue()}\n\nThank you!\n- PATCH Library`;
     
-    const whatsappUrl = `https://wa.me/91${selectedStudent.contact}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    const cleanedPhone = selectedStudent.contact.replace(/\D/g, '');
+    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     
-    toast({
-      title: 'WhatsApp Opened',
-      description: 'WhatsApp message prepared. Please send manually.',
-    });
+    try {
+      // Create and click a temporary link
+      const link = document.createElement('a');
+      link.href = whatsappUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast({
+        title: 'WhatsApp Opened',
+        description: 'WhatsApp message prepared successfully.',
+      });
+    } catch (error) {
+      console.error('Failed to open WhatsApp:', error);
+      
+      // Fallback: copy URL to clipboard
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(whatsappUrl);
+          toast({
+            title: 'WhatsApp URL Copied',
+            description: 'The WhatsApp link has been copied to clipboard.',
+          });
+        } catch (clipboardError) {
+          toast({
+            title: 'Error',
+            description: 'Failed to open WhatsApp. Please try manually.',
+            variant: 'destructive',
+          });
+        }
+      }
+    }
   };
 
   const months = [

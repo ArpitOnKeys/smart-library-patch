@@ -104,12 +104,14 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
     const currentMonth = format(new Date(), 'MMMM yyyy');
     const message = `Dear ${student.name}, your fee of ₹${student.totalDue} for ${currentMonth} is due. Please pay soon. - PATCH Library`;
     
-    const whatsappUrl = `https://wa.me/91${student.contact}?text=${encodeURIComponent(message)}`;
+    const cleanedPhone = student.contact.replace(/\D/g, '');
+    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     
     try {
       // Log the reminder attempt
       const { storage } = await import('@/lib/database');
-      const logs = storage.get('patch_whatsapp_logs');
+      const logs = storage.get('patch_whatsapp_logs') || [];
       const newLog = {
         id: Date.now().toString(),
         studentId: student.id,
@@ -122,23 +124,42 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
       logs.push(newLog);
       storage.set('patch_whatsapp_logs', logs);
       
-      // Open WhatsApp
-      window.open(whatsappUrl, '_blank');
+      // Create and click a temporary link to open WhatsApp
+      const link = document.createElement('a');
+      link.href = whatsappUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
       toast({
         title: 'WhatsApp Opened',
-        description: `Reminder prepared for ${student.name}. Please send the message manually.`,
+        description: `Reminder sent to ${student.name} successfully.`,
       });
       
       onReminderSent();
       
     } catch (error) {
       console.error('Error preparing WhatsApp reminder:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to prepare WhatsApp reminder.',
-        variant: 'destructive',
-      });
+      
+      // Fallback: copy URL to clipboard
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(whatsappUrl);
+          toast({
+            title: 'WhatsApp URL Copied',
+            description: 'The WhatsApp link has been copied to clipboard.',
+          });
+        } catch (clipboardError) {
+          toast({
+            title: 'Error',
+            description: 'Failed to prepare WhatsApp reminder.',
+            variant: 'destructive',
+          });
+        }
+      }
     }
   };
 

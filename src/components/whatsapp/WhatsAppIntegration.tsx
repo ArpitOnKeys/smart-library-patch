@@ -120,44 +120,53 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     const cleanedPhone = cleanPhoneNumber(student.contact);
     const encodedMessage = encodeURIComponent(message);
     
-    // Multiple fallback URLs for different scenarios
-    const urls = [
-      `whatsapp://send?phone=${cleanedPhone}&text=${encodedMessage}`, // Desktop app protocol
-      `https://api.whatsapp.com/send?phone=${cleanedPhone}&text=${encodedMessage}`, // Official API
-      `https://wa.me/${cleanedPhone}?text=${encodedMessage}`, // Web WhatsApp
-      `https://web.whatsapp.com/send?phone=${cleanedPhone}&text=${encodedMessage}` // Direct web interface
-    ];
-
+    // Direct WhatsApp Web URL - most reliable method
+    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
+    
     let success = false;
-    let errorMessage = '';
-
-    // Try each URL until one works
-    for (let i = 0; i < urls.length; i++) {
-      try {
-        const url = urls[i];
-        console.log(`Attempting WhatsApp URL ${i + 1}:`, url);
-        
-        // For protocol handlers, try with location.href first
-        if (url.startsWith('whatsapp://')) {
-          try {
-            window.location.href = url;
-            success = true;
-            break;
-          } catch (error) {
-            console.log(`Protocol handler failed, trying next method...`);
-            continue;
-          }
-        } else {
-          // For HTTP URLs, use window.open
-          const newWindow = window.open(url, '_blank');
-          if (newWindow) {
-            success = true;
-            break;
-          }
+    
+    try {
+      // Create a temporary link element and click it programmatically
+      const link = document.createElement('a');
+      link.href = whatsappUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      
+      // Add to DOM temporarily
+      document.body.appendChild(link);
+      
+      // Trigger click
+      link.click();
+      
+      // Clean up
+      document.body.removeChild(link);
+      
+      success = true;
+      console.log('WhatsApp link opened successfully:', whatsappUrl);
+      
+    } catch (error) {
+      console.error('Failed to open WhatsApp link:', error);
+      
+      // Fallback: Show URL to user for manual copy
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          await navigator.clipboard.writeText(whatsappUrl);
+          toast({
+            title: "WhatsApp URL Copied",
+            description: "The WhatsApp link has been copied to your clipboard. Please paste it in your browser.",
+          });
+          success = true;
+        } catch (clipboardError) {
+          console.error('Failed to copy to clipboard:', clipboardError);
         }
-      } catch (error) {
-        errorMessage = `Attempt ${i + 1} failed: ${error}`;
-        console.log(errorMessage);
+      }
+      
+      if (!success) {
+        // Final fallback: prompt user with URL
+        const userConfirmed = confirm(`Failed to open WhatsApp automatically. Would you like to copy this URL manually?\n\n${whatsappUrl}`);
+        if (userConfirmed) {
+          success = true;
+        }
       }
     }
 
