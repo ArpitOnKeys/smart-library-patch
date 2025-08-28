@@ -2,12 +2,14 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Users, Clock, TrendingUp, Settings, LogOut } from 'lucide-react';
+import { BookOpen, Settings, LogOut, Sun, Moon } from 'lucide-react';
 import { auth } from '@/lib/database';
+import { useTheme } from 'next-themes';
 
 export const NavBar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, setTheme } = useTheme();
   
   const handleLogout = () => {
     auth.logout();
@@ -57,6 +59,19 @@ export const NavBar: React.FC = () => {
             <div className="hidden sm:block">
               <span className="text-sm text-muted-foreground">Admin</span>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="button-enhanced"
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+              <span className="sr-only">Toggle theme</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
