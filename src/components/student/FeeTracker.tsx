@@ -13,6 +13,7 @@ import { Student, FeePayment, ReceiptData } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { IndianRupee, Download, MessageCircle, Plus, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
+import { WhatsAppModal } from '@/components/whatsapp/WhatsAppModal';
 
 interface FeeTrackerProps {
   refreshTrigger: number;
@@ -27,6 +28,11 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
   const [paymentMonth, setPaymentMonth] = useState('');
   const [paymentYear, setPaymentYear] = useState(new Date().getFullYear().toString());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [whatsappModal, setWhatsappModal] = useState<{ isOpen: boolean; student: Student | null; message: string }>({
+    isOpen: false,
+    student: null,
+    message: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -195,28 +201,11 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
     
     const message = `Hello! Fee receipt for ${selectedStudent.name}:\n\nAmount: ₹${payment.amount}\nMonth: ${payment.month} ${payment.year}\nSeat: ${selectedStudent.seatNumber}\n\nTotal Due: ₹${calculateTotalDue()}\n\nThank you!\n- PATCH Library`;
     
-    const cleanedPhone = selectedStudent.contact.replace(/\D/g, '');
-    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    
-    try {
-      console.log('Opening WhatsApp with URL:', whatsappUrl);
-      
-      // Use direct navigation to avoid blocks
-      window.location.href = whatsappUrl;
-      
-      toast({
-        title: 'WhatsApp Opening',
-        description: 'Redirecting to WhatsApp with fee receipt.',
-      });
-    } catch (error) {
-      console.error('Failed to open WhatsApp:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to open WhatsApp. Please try manually.',
-        variant: 'destructive',
-      });
-    }
+    setWhatsappModal({
+      isOpen: true,
+      student: selectedStudent,
+      message
+    });
   };
 
   const months = [
@@ -412,6 +401,16 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
           </div>
         </CardContent>
       </Card>
+
+      {/* WhatsApp Modal */}
+      {whatsappModal.student && (
+        <WhatsAppModal
+          isOpen={whatsappModal.isOpen}
+          onClose={() => setWhatsappModal({ isOpen: false, student: null, message: '' })}
+          student={whatsappModal.student}
+          message={whatsappModal.message}
+        />
+      )}
     </div>
   );
 };

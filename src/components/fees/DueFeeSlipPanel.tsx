@@ -13,6 +13,7 @@ import { Student, FeePayment } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { MessageCircle, Search, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
+import { WhatsAppModal } from '@/components/whatsapp/WhatsAppModal';
 
 interface StudentDueInfo extends Student {
   totalPaid: number;
@@ -32,6 +33,11 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedShift, setSelectedShift] = useState<string>('all');
   const [showOnlyDue, setShowOnlyDue] = useState(false);
+  const [whatsappModal, setWhatsappModal] = useState<{ isOpen: boolean; student: Student | null; message: string }>({
+    isOpen: false,
+    student: null,
+    message: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -104,10 +110,6 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
     const currentMonth = format(new Date(), 'MMMM yyyy');
     const message = `Dear ${student.name}, your fee of ₹${student.totalDue} for ${currentMonth} is due. Please pay soon. - PATCH Library`;
     
-    const cleanedPhone = student.contact.replace(/\D/g, '');
-    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    
     try {
       // Log the reminder attempt
       const { storage } = await import('@/lib/database');
@@ -124,23 +126,20 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
       logs.push(newLog);
       storage.set('patch_whatsapp_logs', logs);
       
-      console.log('Opening WhatsApp with URL:', whatsappUrl);
-      
-      // Use direct navigation to avoid popup blockers
-      window.location.href = whatsappUrl;
-      
-      toast({
-        title: 'WhatsApp Opening',
-        description: `Sending reminder to ${student.name}.`,
+      // Open WhatsApp modal
+      setWhatsappModal({
+        isOpen: true,
+        student,
+        message
       });
       
       onReminderSent();
       
     } catch (error) {
-      console.error('Error opening WhatsApp:', error);
+      console.error('Error preparing WhatsApp reminder:', error);
       toast({
         title: 'Error',
-        description: 'Failed to open WhatsApp reminder.',
+        description: 'Failed to prepare WhatsApp reminder.',
         variant: 'destructive',
       });
     }
@@ -275,6 +274,16 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* WhatsApp Modal */}
+      {whatsappModal.student && (
+        <WhatsAppModal
+          isOpen={whatsappModal.isOpen}
+          onClose={() => setWhatsappModal({ isOpen: false, student: null, message: '' })}
+          student={whatsappModal.student}
+          message={whatsappModal.message}
+        />
+      )}
     </div>
   );
 };

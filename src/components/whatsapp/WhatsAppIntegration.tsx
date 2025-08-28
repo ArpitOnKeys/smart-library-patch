@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2 } from 'lucide-react';
 import { Student } from '@/types/database';
+import { WhatsAppModal } from './WhatsAppModal';
 
 interface MessageTemplate {
   id: string;
@@ -64,6 +65,11 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   const [newTemplate, setNewTemplate] = useState({ name: '', content: '' });
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [whatsappModal, setWhatsappModal] = useState<{ isOpen: boolean; student: Student | null; message: string }>({
+    isOpen: false,
+    student: null,
+    message: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -117,26 +123,12 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   };
 
   const sendWhatsAppMessage = async (student: Student, message: string) => {
-    const cleanedPhone = cleanPhoneNumber(student.contact);
-    const encodedMessage = encodeURIComponent(message);
-    
-    // Use only wa.me which is the most reliable and not blocked
-    const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
-    
-    try {
-      console.log('Opening WhatsApp with URL:', whatsappUrl);
-      
-      // Use user-initiated navigation to avoid popup blockers
-      window.location.href = whatsappUrl;
-      
-      console.log('WhatsApp URL opened successfully');
-      
-    } catch (error) {
-      console.error('Failed to open WhatsApp:', error);
-      
-      // Fallback: Show instructions to user
-      alert(`Please copy this WhatsApp link and open it manually:\n\n${whatsappUrl}`);
-    }
+    // Open modal for manual sending
+    setWhatsappModal({
+      isOpen: true,
+      student,
+      message
+    });
 
     // Log the message attempt
     const log: WhatsAppLog = {
@@ -151,11 +143,6 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
 
     const newLogs = [log, ...logs];
     saveLogs(newLogs);
-
-    toast({
-      title: "WhatsApp Opening",
-      description: `Redirecting to WhatsApp for ${student.name}`,
-    });
 
     if (onSingleMessage) {
       onSingleMessage(student);
@@ -447,6 +434,16 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
           </div>
         </CardContent>
       </Card>
+
+      {/* WhatsApp Modal */}
+      {whatsappModal.student && (
+        <WhatsAppModal
+          isOpen={whatsappModal.isOpen}
+          onClose={() => setWhatsappModal({ isOpen: false, student: null, message: '' })}
+          student={whatsappModal.student}
+          message={whatsappModal.message}
+        />
+      )}
     </div>
   );
 };
