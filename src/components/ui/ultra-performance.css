@@ -1,0 +1,66 @@
+/* Ultra-Performance CSS Optimizations */
+
+/* Critical Performance Hints */
+.performance-critical {
+  contain: layout style paint;
+  content-visibility: auto;
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+/* Zero-Delay Interactions */
+.instant-response {
+  transition: all 0.1s cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: transform, box-shadow;
+  contain: layout style paint;
+}
+
+/* Ultra-Sharp Text Rendering */
+.text-ultra-sharp {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+  letter-spacing: -0.01em;
+  line-height: 1.5;
+}
+
+/* High-Performance Animations */
+.animate-performance {
+  animation-duration: 0.2s;
+  animation-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+  animation-fill-mode: both;
+  will-change: transform, opacity;
+  contain: layout style paint;
+}
+
+/* Ultra-Smooth Scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* GPU-Accelerated Transforms */
+.gpu-accelerated {
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform;
+}
+
+/* Maximum Clarity Images */
+.image-ultra-sharp {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+/* Zero-Layout-Shift Containers */
+.no-layout-shift {
+  contain: layout style paint;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 500px;
+}

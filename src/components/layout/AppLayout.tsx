@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { NavBar } from './NavBar';
 import { BrandFooter } from './BrandFooter';
 import { ScenicBackground } from '@/components/scenic/ScenicBackground';
+import { PerformanceContainer, SmoothMotion } from '@/components/ui/performance-optimizer';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -11,27 +12,21 @@ interface AppLayoutProps {
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Scenic Background System */}
+    <PerformanceContainer className="min-h-screen relative overflow-hidden">
+      {/* Ultra-Sharp Scenic Background System */}
       <ScenicBackground />
       
-      {/* Main Content */}
+      {/* Main Content with Zero-Lag Performance */}
       <div className="relative z-10 min-h-screen flex flex-col">
         <NavBar />
-        <motion.main
+        <SmoothMotion
           className="flex-1 container mx-auto px-4 py-8"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            duration: 0.8,
-            delay: 0.2,
-            ease: "easeOut"
-          }}
+          delay={0.1}
         >
           {children}
-        </motion.main>
+        </SmoothMotion>
         <BrandFooter />
       </div>
-    </div>
+    </PerformanceContainer>
   );
 };

@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,9 +10,9 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Enhanced Natural Color Palette with Better Contrast */
-    --background: 210 45% 97%;
-    --foreground: 220 25% 8%;
+    /* Ultra-High Contrast Color Palette for Maximum Clarity */
+    --background: 210 50% 99%;
+    --foreground: 220 30% 5%;
 
     /* Enhanced Glass Cards with Better Typography Support */
     --card: 0 0% 100%/85%;
@@ -69,12 +69,15 @@ All colors MUST be HSL.
     --glow-pink: 330 80% 65%/45%;
     --glow-golden: 45 95% 55%/45%;
 
-    /* Typography Enhancement Variables */
-    --text-shadow-light: 0 2px 8px hsl(0 0% 0% / 0.1);
-    --text-shadow-strong: 0 2px 12px hsl(0 0% 0% / 0.2);
-    --text-glow: 0 0 20px;
-    --glass-text-contrast: 220 25% 8%;
-    --glass-text-muted: 210 20% 25%;
+    /* Ultra-Sharp Typography Variables for Maximum Clarity */
+    --text-shadow-crisp: 0 1px 2px hsl(0 0% 0% / 0.05);
+    --text-shadow-medium: 0 2px 4px hsl(0 0% 0% / 0.08);
+    --text-shadow-strong: 0 2px 6px hsl(0 0% 0% / 0.12);
+    --text-glow: 0 0 12px;
+    --glass-text-contrast: 220 35% 2%;
+    --glass-text-muted: 210 25% 20%;
+    --text-rendering: optimizeLegibility;
+    --font-smoothing: antialiased;
   }
 
   .dark {
@@ -146,10 +149,53 @@ All colors MUST be HSL.
 @layer base {
   * {
     @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
-    @apply bg-background text-foreground font-inter antialiased;
+    @apply bg-background text-foreground font-inter;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'liga' 1, 'calt' 1, 'kern' 1;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+    will-change: auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+
+  /* Ultra-Performance Global Optimizations */
+  img, 
+  picture, 
+  video, 
+  canvas, 
+  svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    backface-visibility: hidden;
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* GPU Acceleration for All Interactive Elements */
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"],
+  [tabindex] {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    will-change: transform;
   }
 }
 
@@ -178,24 +224,27 @@ All colors MUST be HSL.
     will-change: transform;
   }
 
-  /* Enhanced Liquid Glass System - Premium Performance */
+  /* Ultra-Premium Liquid Glass System - Zero Lag Performance */
   .liquid-glass {
-    @apply backdrop-blur-xl border border-border/40 rounded-2xl shadow-2xl;
+    @apply backdrop-blur-2xl border border-border/30 rounded-3xl;
     background: linear-gradient(
       135deg,
-      hsl(var(--card)) 0%,
-      hsl(var(--card))/75% 100%
+      hsl(var(--card))/98% 0%,
+      hsl(var(--card))/90% 50%,
+      hsl(var(--card))/95% 100%
     );
     box-shadow: 
-      0 12px 48px hsl(var(--glow-blue))/50%,
-      0 4px 16px hsl(var(--glow-pink))/30%,
-      inset 0 2px 0 hsl(var(--border))/80%,
-      0 0 0 1px hsl(var(--border))/40%;
+      0 20px 60px hsl(var(--glow-blue))/40%,
+      0 8px 32px hsl(var(--glow-pink))/25%,
+      0 4px 16px hsl(var(--glow-golden))/15%,
+      inset 0 1px 0 hsl(var(--primary-foreground))/20%,
+      0 0 0 1px hsl(var(--border))/25%;
     color: hsl(var(--glass-text-contrast));
-    text-shadow: var(--text-shadow-strong);
-    transform: translateZ(0);
-    will-change: transform, box-shadow;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-shadow: var(--text-shadow-crisp);
+    transform: translate3d(0, 0, 0);
+    will-change: transform, box-shadow, opacity;
+    transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    contain: layout style paint;
   }
 
   .liquid-glass-nav {
@@ -254,36 +303,36 @@ All colors MUST be HSL.
       0 0 60px hsl(var(--glow-golden))/30%;
   }
 
-  /* Premium Button Interactions - Instant Response */
+  /* Instant-Response Button Interactions - Zero Delay */
   .button-liquid {
-    @apply relative overflow-hidden font-bold tracking-wide;
+    @apply relative overflow-hidden font-semibold tracking-wide;
     background: linear-gradient(
       135deg,
-      hsl(var(--primary))/98% 0%,
-      hsl(var(--primary)) 40%,
+      hsl(var(--primary)) 0%,
       hsl(var(--primary-glow)) 100%
     );
     box-shadow: 
-      0 8px 24px hsl(var(--glow-blue))/40%,
-      0 2px 8px hsl(var(--glow-pink))/25%,
-      inset 0 2px 0 hsl(var(--primary-foreground))/30%;
+      0 8px 28px hsl(var(--glow-blue))/35%,
+      0 4px 12px hsl(var(--glow-pink))/20%,
+      inset 0 1px 0 hsl(var(--primary-foreground))/25%;
     color: hsl(var(--primary-foreground));
-    text-shadow: var(--text-glow) hsl(var(--primary-foreground))/40%;
-    transform: translateZ(0);
+    text-shadow: var(--text-shadow-crisp);
+    transform: translate3d(0, 0, 0);
     will-change: transform, box-shadow;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+    contain: layout style paint;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
   .button-liquid:hover {
-    transform: translateY(-3px) scale(1.03);
+    transform: translate3d(0, -2px, 0) scale(1.02);
     box-shadow: 
-      0 16px 48px hsl(var(--glow-blue))/60%,
-      0 8px 24px hsl(var(--glow-pink))/40%,
-      0 4px 12px hsl(var(--glow-golden))/30%,
-      inset 0 2px 0 hsl(var(--primary-foreground))/40%;
-    text-shadow: 
-      var(--text-glow) hsl(var(--primary-foreground))/60%,
-      0 0 30px hsl(var(--primary-glow))/80%;
+      0 20px 60px hsl(var(--glow-blue))/45%,
+      0 10px 30px hsl(var(--glow-pink))/30%,
+      0 5px 15px hsl(var(--glow-golden))/25%,
+      inset 0 1px 0 hsl(var(--primary-foreground))/35%;
+    filter: brightness(1.05);
   }
 
   .button-liquid::before {
@@ -336,67 +385,84 @@ All colors MUST be HSL.
       inset 0 1px 0 hsl(var(--border))/40%;
   }
 
-  /* Premium Card Interactions */
+  /* Instant-Response Card Interactions - Ultra Smooth */
   .card-liquid {
     @apply liquid-glass-panel;
-    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-    transform: translateZ(0);
-    will-change: transform, box-shadow;
+    transition: all 0.2s cubic-bezier(0.23, 1, 0.32, 1);
+    transform: translate3d(0, 0, 0);
+    will-change: transform, box-shadow, filter;
+    contain: layout style paint;
   }
 
   .card-liquid:hover {
-    transform: translateY(-6px) scale(1.02);
+    transform: translate3d(0, -4px, 0) scale(1.015);
     box-shadow: 
-      0 32px 80px hsl(var(--glow-blue))/35%,
-      0 16px 40px hsl(var(--glow-pink))/25%,
-      0 8px 20px hsl(var(--glow-golden))/20%,
-      inset 0 2px 0 hsl(var(--border))/80%,
-      inset 0 -2px 0 hsl(var(--border))/50%;
+      0 40px 100px hsl(var(--glow-blue))/30%,
+      0 20px 50px hsl(var(--glow-pink))/20%,
+      0 10px 25px hsl(var(--glow-golden))/15%,
+      inset 0 1px 0 hsl(var(--primary-foreground))/20%;
+    filter: brightness(1.02);
   }
 
-  /* Premium Typography System */
+  /* Ultra-Sharp Typography System - Maximum Legibility */
   .text-glass-primary {
     color: hsl(var(--glass-text-contrast));
-    text-shadow: 
-      var(--text-shadow-strong),
-      0 0 10px hsl(var(--glass-text-contrast))/20%;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    text-shadow: var(--text-shadow-crisp);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
   }
 
   .text-glass-secondary {
     color: hsl(var(--glass-text-muted));
-    text-shadow: var(--text-shadow-strong);
-    font-weight: 600;
+    text-shadow: var(--text-shadow-crisp);
+    font-weight: 500;
     letter-spacing: -0.01em;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
   }
 
   .text-glass-glow {
     color: hsl(var(--primary));
     text-shadow: 
-      var(--text-glow) hsl(var(--primary))/50%,
-      0 0 20px hsl(var(--primary-glow))/60%,
-      0 0 40px hsl(var(--primary))/30%;
-    font-weight: 800;
-    letter-spacing: -0.025em;
+      var(--text-glow) hsl(var(--primary))/40%,
+      0 0 16px hsl(var(--primary-glow))/50%;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
   .heading-glass {
     color: hsl(var(--glass-text-contrast));
-    text-shadow: 
-      var(--text-shadow-strong),
-      0 0 15px hsl(var(--glass-text-contrast))/25%;
-    font-weight: 900;
-    letter-spacing: -0.04em;
+    text-shadow: var(--text-shadow-medium);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.2;
   }
 
   .label-glass {
     color: hsl(var(--glass-text-contrast));
-    text-shadow: var(--text-shadow-strong);
-    font-weight: 700;
+    text-shadow: var(--text-shadow-crisp);
+    font-weight: 600;
     font-size: 0.875rem;
-    letter-spacing: 0.025em;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Ultra-Sharp Code Typography */
+  .text-code {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Monaco', 'Consolas', monospace;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'liga' 0, 'calt' 0;
   }
 
   /* Enhanced Floating Elements */

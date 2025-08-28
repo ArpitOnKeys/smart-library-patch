@@ -22,51 +22,63 @@ export const MicroInteraction: React.FC<MicroInteractionProps> = ({
       rest: { 
         y: 0, 
         scale: 1,
-        boxShadow: '0 4px 12px hsl(var(--glow-blue) / 0.1)'
+        boxShadow: '0 8px 24px hsl(var(--glow-blue) / 0.15)',
+        filter: 'brightness(1)'
       },
       hover: { 
-        y: -4, 
-        scale: 1.02,
-        boxShadow: '0 12px 32px hsl(var(--glow-blue) / 0.2), 0 4px 16px hsl(var(--glow-pink) / 0.1)'
+        y: -3, 
+        scale: 1.015,
+        boxShadow: '0 20px 50px hsl(var(--glow-blue) / 0.25), 0 8px 20px hsl(var(--glow-pink) / 0.15)',
+        filter: 'brightness(1.03)'
       },
       tap: { 
-        y: 0, 
-        scale: 0.98 
+        y: -1, 
+        scale: 0.99,
+        transition: { duration: 0.1 }
       }
     },
     'hover-glow': {
+      rest: { 
+        scale: 1,
+        filter: 'brightness(1)',
+        boxShadow: '0 4px 12px hsl(var(--glow-blue) / 0.1)'
+      },
+      hover: { 
+        scale: 1.03,
+        filter: 'brightness(1.08)',
+        boxShadow: '0 12px 30px hsl(var(--glow-blue) / 0.2), 0 0 20px hsl(var(--primary) / 0.15)'
+      },
+      tap: { 
+        scale: 0.97,
+        transition: { duration: 0.1 }
+      }
+    },
+    'hover-scale': {
       rest: { 
         scale: 1,
         filter: 'brightness(1)'
       },
       hover: { 
         scale: 1.05,
-        filter: 'brightness(1.1)'
+        filter: 'brightness(1.05)'
       },
       tap: { 
-        scale: 0.95 
-      }
-    },
-    'hover-scale': {
-      rest: { 
-        scale: 1 
-      },
-      hover: { 
-        scale: 1.08 
-      },
-      tap: { 
-        scale: 0.92 
+        scale: 0.95,
+        transition: { duration: 0.1 }
       }
     },
     'click-ripple': {
       rest: { 
-        scale: 1 
+        scale: 1,
+        filter: 'brightness(1)'
       },
       hover: { 
-        scale: 1.02 
+        scale: 1.02,
+        filter: 'brightness(1.02)'
       },
       tap: { 
-        scale: 0.98 
+        scale: 0.98,
+        transition: { duration: 0.1 }
       }
     }
   };
@@ -85,9 +97,14 @@ export const MicroInteraction: React.FC<MicroInteractionProps> = ({
       onClick={!disabled ? onClick : undefined}
       transition={{
         type: "spring",
-        stiffness: 400,
-        damping: 25,
-        mass: 0.8
+        stiffness: 600,
+        damping: 30,
+        mass: 0.6,
+        velocity: 2
+      }}
+      style={{
+        transform: 'translate3d(0, 0, 0)',
+        backfaceVisibility: 'hidden'
       }}
     >
       {children}
@@ -101,20 +118,25 @@ export const FloatingElement: React.FC<{
   delay?: number;
   amplitude?: number;
   className?: string;
-}> = ({ children, delay = 0, amplitude = 10, className }) => {
+}> = ({ children, delay = 0, amplitude = 8, className }) => {
   return (
     <motion.div
       className={cn('transform-gpu will-change-transform', className)}
-      initial={{ y: 0 }}
+      initial={{ y: 0, rotate: 0 }}
       animate={{
         y: [-amplitude, amplitude, -amplitude],
-        rotate: [-1, 1, -1]
+        rotate: [-0.5, 0.5, -0.5]
       }}
       transition={{
-        duration: 4,
+        duration: 3.5,
         delay,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut",
+        type: "tween"
+      }}
+      style={{
+        transform: 'translate3d(0, 0, 0)',
+        backfaceVisibility: 'hidden'
       }}
     >
       {children}
@@ -130,17 +152,25 @@ export const ShimmerEffect: React.FC<{
   return (
     <motion.div
       className={cn(
-        'relative overflow-hidden bg-gradient-to-r from-transparent via-white/20 to-transparent',
+        'relative overflow-hidden',
         className
       )}
-      initial={{ x: '-100%' }}
-      animate={{ x: '200%' }}
-      transition={{
-        duration: 1.5,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }}
     >
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent"
+        initial={{ x: '-100%' }}
+        animate={{ x: '200%' }}
+        transition={{
+          duration: 1.2,
+          repeat: Infinity,
+          ease: "easeInOut",
+          repeatDelay: 0.5
+        }}
+        style={{
+          transform: 'translate3d(0, 0, 0)',
+          backfaceVisibility: 'hidden'
+        }}
+      />
       {children}
     </motion.div>
   );
