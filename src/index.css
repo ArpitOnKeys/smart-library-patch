@@ -10,37 +10,37 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Natural Color Palette Inspired by Scenic Mountains & River */
-    --background: 210 40% 98%;
-    --foreground: 220 20% 15%;
+    /* Enhanced Natural Color Palette with Better Contrast */
+    --background: 210 45% 97%;
+    --foreground: 220 25% 8%;
 
-    /* Glass Cards - Light frosted effect */
-    --card: 0 0% 100%/80%;
-    --card-foreground: 220 20% 15%;
+    /* Enhanced Glass Cards with Better Typography Support */
+    --card: 0 0% 100%/85%;
+    --card-foreground: 220 25% 10%;
 
     --popover: 0 0% 100%/95%;
-    --popover-foreground: 220 20% 15%;
+    --popover-foreground: 220 25% 10%;
 
-    /* Primary: Sky Blue / River Blue */
-    --primary: 200 85% 55%;
-    --primary-glow: 200 85% 70%;
-    --primary-foreground: 210 40% 98%;
+    /* Enhanced Primary: Vibrant Sky Blue */
+    --primary: 200 95% 50%;
+    --primary-glow: 200 100% 65%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Soft Green from Flora */
-    --secondary: 120 40% 85%;
-    --secondary-foreground: 120 30% 25%;
+    /* Enhanced Secondary: Rich Forest Green */
+    --secondary: 120 50% 75%;
+    --secondary-foreground: 120 40% 15%;
 
-    /* Muted: Mountain Mist */
-    --muted: 210 20% 92%;
-    --muted-foreground: 210 15% 45%;
+    /* Enhanced Muted with Better Contrast */
+    --muted: 210 25% 88%;
+    --muted-foreground: 210 20% 35%;
 
-    /* Accent: Blossom Pink */
-    --accent: 330 65% 88%;
-    --accent-foreground: 330 40% 25%;
+    /* Enhanced Accent: Vibrant Blossom Pink */
+    --accent: 330 80% 75%;
+    --accent-foreground: 330 50% 15%;
 
-    /* Golden Sunset Highlights */
-    --golden: 45 85% 65%;
-    --golden-foreground: 45 60% 15%;
+    /* Enhanced Golden Sunset */
+    --golden: 45 95% 55%;
+    --golden-foreground: 45 70% 10%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
@@ -62,46 +62,53 @@ All colors MUST be HSL.
     --sidebar-border: 220 20% 85%/40%;
     --sidebar-ring: 200 85% 55%;
 
-    /* Atmospheric Effects */
-    --light-ray: 45 85% 75%/30%;
-    --mist: 210 30% 95%/20%;
-    --glow-blue: 200 85% 55%/40%;
-    --glow-pink: 330 65% 75%/40%;
-    --glow-golden: 45 85% 65%/40%;
+    /* Enhanced Atmospheric Effects */
+    --light-ray: 45 95% 65%/35%;
+    --mist: 210 35% 92%/25%;
+    --glow-blue: 200 95% 50%/45%;
+    --glow-pink: 330 80% 65%/45%;
+    --glow-golden: 45 95% 55%/45%;
+
+    /* Typography Enhancement Variables */
+    --text-shadow-light: 0 2px 8px hsl(0 0% 0% / 0.1);
+    --text-shadow-strong: 0 2px 12px hsl(0 0% 0% / 0.2);
+    --text-glow: 0 0 20px;
+    --glass-text-contrast: 220 25% 8%;
+    --glass-text-muted: 210 20% 25%;
   }
 
   .dark {
-    /* Dark Mode - Night Mountain Scene */
-    --background: 220 30% 8%;
-    --foreground: 210 20% 92%;
+    /* Enhanced Dark Mode with Better Contrast */
+    --background: 220 35% 6%;
+    --foreground: 0 0% 98%;
 
-    /* Dark Glass Cards */
-    --card: 220 25% 12%/80%;
-    --card-foreground: 210 20% 92%;
+    /* Enhanced Dark Glass Cards */
+    --card: 220 30% 10%/85%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 220 25% 10%/95%;
-    --popover-foreground: 210 20% 92%;
+    --popover: 220 30% 8%/95%;
+    --popover-foreground: 0 0% 98%;
 
-    /* Primary: Moonlit Blue */
-    --primary: 200 75% 65%;
-    --primary-glow: 200 85% 80%;
-    --primary-foreground: 220 30% 8%;
+    /* Enhanced Primary: Bright Moonlit Blue */
+    --primary: 200 100% 65%;
+    --primary-glow: 200 100% 80%;
+    --primary-foreground: 220 35% 6%;
 
-    /* Secondary: Dark Forest Green */
-    --secondary: 120 25% 20%;
-    --secondary-foreground: 120 20% 85%;
+    /* Enhanced Secondary: Vibrant Forest */
+    --secondary: 120 35% 35%;
+    --secondary-foreground: 120 25% 90%;
 
-    /* Muted: Night Mist */
-    --muted: 220 20% 15%;
-    --muted-foreground: 220 15% 65%;
+    /* Enhanced Muted with Better Contrast */
+    --muted: 220 25% 18%;
+    --muted-foreground: 220 20% 75%;
 
-    /* Accent: Night Blossom */
-    --accent: 330 40% 25%;
-    --accent-foreground: 330 30% 85%;
+    /* Enhanced Accent: Bright Night Blossom */
+    --accent: 330 70% 45%;
+    --accent-foreground: 330 35% 90%;
 
-    /* Golden Moonlight */
-    --golden: 45 60% 55%;
-    --golden-foreground: 45 40% 85%;
+    /* Enhanced Golden Moonlight */
+    --golden: 45 85% 65%;
+    --golden-foreground: 45 45% 90%;
 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 95%;
@@ -121,12 +128,18 @@ All colors MUST be HSL.
     --sidebar-border: 220 25% 25%/40%;
     --sidebar-ring: 200 75% 65%;
 
-    /* Dark Atmospheric Effects */
-    --light-ray: 45 60% 55%/20%;
-    --mist: 220 25% 15%/15%;
-    --glow-blue: 200 75% 65%/30%;
-    --glow-pink: 330 50% 65%/30%;
-    --glow-golden: 45 60% 55%/30%;
+    /* Enhanced Dark Atmospheric Effects */
+    --light-ray: 45 85% 65%/25%;
+    --mist: 220 30% 12%/20%;
+    --glow-blue: 200 100% 65%/35%;
+    --glow-pink: 330 70% 65%/35%;
+    --glow-golden: 45 85% 65%/35%;
+
+    /* Dark Mode Typography Enhancement */
+    --text-shadow-light: 0 2px 8px hsl(0 0% 0% / 0.3);
+    --text-shadow-strong: 0 2px 12px hsl(0 0% 0% / 0.5);
+    --glass-text-contrast: 0 0% 98%;
+    --glass-text-muted: 220 20% 80%;
   }
 }
 
@@ -160,45 +173,51 @@ All colors MUST be HSL.
     z-index: -1;
   }
 
-  /* Liquid Glass System */
+  /* Enhanced Liquid Glass System with Better Typography */
   .liquid-glass {
-    @apply backdrop-blur-xl border border-border/30 rounded-2xl shadow-2xl;
+    @apply backdrop-blur-xl border border-border/35 rounded-2xl shadow-2xl;
     background: linear-gradient(
       135deg,
       hsl(var(--card)) 0%,
-      hsl(var(--card))/60% 100%
+      hsl(var(--card))/65% 100%
     );
     box-shadow: 
       0 8px 32px hsl(var(--glow-blue)),
-      inset 0 1px 0 hsl(var(--border)),
-      0 0 0 1px hsl(var(--border))/20%;
+      inset 0 2px 0 hsl(var(--border)),
+      0 0 0 1px hsl(var(--border))/25%;
+    color: hsl(var(--glass-text-contrast));
+    text-shadow: var(--text-shadow-light);
   }
 
   .liquid-glass-nav {
-    @apply backdrop-blur-2xl border-b border-border/20;
+    @apply backdrop-blur-2xl border-b border-border/25;
     background: linear-gradient(
       180deg,
       hsl(var(--card)) 0%,
-      hsl(var(--card))/80% 100%
-    );
-    box-shadow: 
-      0 4px 24px hsl(var(--glow-blue))/50%,
-      inset 0 1px 0 hsl(var(--border))/50%;
-  }
-
-  .liquid-glass-panel {
-    @apply backdrop-blur-2xl border border-border/20 rounded-3xl;
-    background: linear-gradient(
-      145deg,
-      hsl(var(--card))/90% 0%,
-      hsl(var(--card))/70% 50%,
       hsl(var(--card))/85% 100%
     );
     box-shadow: 
-      0 12px 40px hsl(var(--glow-blue))/30%,
-      0 4px 12px hsl(var(--glow-pink))/20%,
-      inset 0 1px 0 hsl(var(--border))/60%,
-      inset 0 -1px 0 hsl(var(--border))/30%;
+      0 4px 24px hsl(var(--glow-blue))/60%,
+      inset 0 2px 0 hsl(var(--border))/60%;
+    color: hsl(var(--glass-text-contrast));
+    text-shadow: var(--text-shadow-light);
+  }
+
+  .liquid-glass-panel {
+    @apply backdrop-blur-2xl border border-border/25 rounded-3xl;
+    background: linear-gradient(
+      145deg,
+      hsl(var(--card))/95% 0%,
+      hsl(var(--card))/75% 50%,
+      hsl(var(--card))/90% 100%
+    );
+    box-shadow: 
+      0 12px 40px hsl(var(--glow-blue))/35%,
+      0 4px 12px hsl(var(--glow-pink))/25%,
+      inset 0 2px 0 hsl(var(--border))/70%,
+      inset 0 -2px 0 hsl(var(--border))/35%;
+    color: hsl(var(--glass-text-contrast));
+    text-shadow: var(--text-shadow-light);
   }
 
   /* Brand Elements */
@@ -219,26 +238,29 @@ All colors MUST be HSL.
       0 0 60px hsl(var(--glow-golden))/30%;
   }
 
-  /* Enhanced Interactions */
+  /* Enhanced Button Interactions with Better Typography */
   .button-liquid {
-    @apply relative overflow-hidden transition-all duration-300 ease-out;
+    @apply relative overflow-hidden transition-all duration-300 ease-out font-semibold;
     background: linear-gradient(
       135deg,
-      hsl(var(--primary))/90% 0%,
+      hsl(var(--primary))/95% 0%,
       hsl(var(--primary)) 50%,
       hsl(var(--primary-glow)) 100%
     );
     box-shadow: 
-      0 4px 16px hsl(var(--glow-blue))/40%,
-      inset 0 1px 0 hsl(var(--primary-foreground))/20%;
+      0 4px 16px hsl(var(--glow-blue))/50%,
+      inset 0 2px 0 hsl(var(--primary-foreground))/25%;
+    color: hsl(var(--primary-foreground));
+    text-shadow: var(--text-shadow-strong);
   }
 
   .button-liquid:hover {
-    transform: translateY(-2px);
+    transform: translateY(-2px) scale(1.02);
     box-shadow: 
-      0 8px 24px hsl(var(--glow-blue))/60%,
-      0 4px 12px hsl(var(--glow-pink))/30%,
-      inset 0 1px 0 hsl(var(--primary-foreground))/30%;
+      0 8px 24px hsl(var(--glow-blue))/70%,
+      0 4px 12px hsl(var(--glow-pink))/40%,
+      inset 0 2px 0 hsl(var(--primary-foreground))/35%;
+    text-shadow: var(--text-glow) hsl(var(--primary-foreground))/50%;
   }
 
   .button-liquid::before {
@@ -306,7 +328,41 @@ All colors MUST be HSL.
       inset 0 -1px 0 hsl(var(--border))/40%;
   }
 
-  /* Floating Elements */
+  /* Enhanced Typography Classes */
+  .text-glass-primary {
+    color: hsl(var(--glass-text-contrast));
+    text-shadow: var(--text-shadow-light);
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+
+  .text-glass-secondary {
+    color: hsl(var(--glass-text-muted));
+    text-shadow: var(--text-shadow-light);
+    font-weight: 600;
+  }
+
+  .text-glass-glow {
+    color: hsl(var(--primary));
+    text-shadow: var(--text-glow) hsl(var(--primary))/40%;
+    font-weight: 700;
+  }
+
+  .heading-glass {
+    color: hsl(var(--glass-text-contrast));
+    text-shadow: var(--text-shadow-strong);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+  }
+
+  .label-glass {
+    color: hsl(var(--glass-text-contrast));
+    text-shadow: var(--text-shadow-light);
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+
+  /* Enhanced Floating Elements */
   .floating-element {
     @apply absolute pointer-events-none opacity-60;
     animation: float 6s ease-in-out infinite;
