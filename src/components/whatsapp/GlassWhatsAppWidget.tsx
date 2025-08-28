@@ -56,7 +56,7 @@ const containerVariants = {
     scale: 1,
     transition: {
       duration: 0.4,
-      ease: [0.23, 1, 0.32, 1],
+      ease: "easeOut" as const,
       staggerChildren: 0.1
     }
   }
@@ -83,7 +83,7 @@ const statusIndicatorVariants = {
   },
   sending: {
     rotate: 360,
-    transition: { duration: 1, repeat: Infinity, ease: "linear" }
+    transition: { duration: 1, repeat: Infinity, ease: "linear" as const }
   }
 };
 

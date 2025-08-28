@@ -61,7 +61,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ duration: 0.2, ease: "easeOut" as const }}
         >
           <span className="relative z-10">
             {children}
@@ -156,7 +156,7 @@ export const GlassFloatingButton: React.FC<GlassFloatingButtonProps> = ({
       animate={{ scale: 1, opacity: 1 }}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
-      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+      transition={{ duration: 0.3, ease: "easeOut" as const }}
     >
       <GlassButton
         {...props}

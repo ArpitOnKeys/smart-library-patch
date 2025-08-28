@@ -193,7 +193,7 @@ export const AmbientSoundControl = () => {
                         animate={{ scale: [1, 1.2, 1] }}
                         transition={{ duration: 2, repeat: Infinity }}
                       >
-                        <currentTrack.icon className="h-4 w-4" style={{ color: currentTrack.color }} />
+                        <currentTrack.icon className="h-4 w-4 text-accent" />
                       </motion.div>
                       <span className="text-sm">{currentTrack.name}</span>
                     </motion.div>
@@ -339,7 +339,7 @@ export const AmbientSoundControl = () => {
                             ease: "easeInOut"
                           }}
                         >
-                          <currentTrack.icon className="h-5 w-5" style={{ color: currentTrack.color }} />
+                          <currentTrack.icon className="h-5 w-5 text-accent" />
                         </motion.div>
                         <div className="flex-1">
                           <div className="text-sm text-white">{currentTrack.name}</div>

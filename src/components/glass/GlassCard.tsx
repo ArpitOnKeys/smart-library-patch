@@ -41,7 +41,7 @@ export const GlassCard: React.FC<GlassCardProps> = ({
       whileTap={{ scale: variant === 'interactive' ? 0.98 : 1 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+      transition={{ duration: 0.4, ease: "easeOut" as const }}
       {...props}
     >
       {children}
