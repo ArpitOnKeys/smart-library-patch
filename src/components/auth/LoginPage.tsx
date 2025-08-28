@@ -226,7 +226,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
                     ) : (
                       "Sign In to PATCH"
                     )}
-                  </LiquidButton>
+                  </button>
                 </motion.div>
 
                 <motion.div
