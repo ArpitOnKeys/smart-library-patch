@@ -124,42 +124,25 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
       logs.push(newLog);
       storage.set('patch_whatsapp_logs', logs);
       
-      // Create and click a temporary link to open WhatsApp
-      const link = document.createElement('a');
-      link.href = whatsappUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      console.log('Opening WhatsApp with URL:', whatsappUrl);
       
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Use direct navigation to avoid popup blockers
+      window.location.href = whatsappUrl;
       
       toast({
-        title: 'WhatsApp Opened',
-        description: `Reminder sent to ${student.name} successfully.`,
+        title: 'WhatsApp Opening',
+        description: `Sending reminder to ${student.name}.`,
       });
       
       onReminderSent();
       
     } catch (error) {
-      console.error('Error preparing WhatsApp reminder:', error);
-      
-      // Fallback: copy URL to clipboard
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(whatsappUrl);
-          toast({
-            title: 'WhatsApp URL Copied',
-            description: 'The WhatsApp link has been copied to clipboard.',
-          });
-        } catch (clipboardError) {
-          toast({
-            title: 'Error',
-            description: 'Failed to prepare WhatsApp reminder.',
-            variant: 'destructive',
-          });
-        }
-      }
+      console.error('Error opening WhatsApp:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to open WhatsApp reminder.',
+        variant: 'destructive',
+      });
     }
   };
 

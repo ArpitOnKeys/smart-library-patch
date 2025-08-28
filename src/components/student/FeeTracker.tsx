@@ -200,39 +200,22 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
     
     try {
-      // Create and click a temporary link
-      const link = document.createElement('a');
-      link.href = whatsappUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      console.log('Opening WhatsApp with URL:', whatsappUrl);
       
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Use direct navigation to avoid blocks
+      window.location.href = whatsappUrl;
       
       toast({
-        title: 'WhatsApp Opened',
-        description: 'WhatsApp message prepared successfully.',
+        title: 'WhatsApp Opening',
+        description: 'Redirecting to WhatsApp with fee receipt.',
       });
     } catch (error) {
       console.error('Failed to open WhatsApp:', error);
-      
-      // Fallback: copy URL to clipboard
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(whatsappUrl);
-          toast({
-            title: 'WhatsApp URL Copied',
-            description: 'The WhatsApp link has been copied to clipboard.',
-          });
-        } catch (clipboardError) {
-          toast({
-            title: 'Error',
-            description: 'Failed to open WhatsApp. Please try manually.',
-            variant: 'destructive',
-          });
-        }
-      }
+      toast({
+        title: 'Error',
+        description: 'Failed to open WhatsApp. Please try manually.',
+        variant: 'destructive',
+      });
     }
   };
 

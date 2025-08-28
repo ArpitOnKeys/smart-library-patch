@@ -120,54 +120,22 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     const cleanedPhone = cleanPhoneNumber(student.contact);
     const encodedMessage = encodeURIComponent(message);
     
-    // Direct WhatsApp Web URL - most reliable method
+    // Use only wa.me which is the most reliable and not blocked
     const whatsappUrl = `https://wa.me/${cleanedPhone}?text=${encodedMessage}`;
     
-    let success = false;
-    
     try {
-      // Create a temporary link element and click it programmatically
-      const link = document.createElement('a');
-      link.href = whatsappUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
+      console.log('Opening WhatsApp with URL:', whatsappUrl);
       
-      // Add to DOM temporarily
-      document.body.appendChild(link);
+      // Use user-initiated navigation to avoid popup blockers
+      window.location.href = whatsappUrl;
       
-      // Trigger click
-      link.click();
-      
-      // Clean up
-      document.body.removeChild(link);
-      
-      success = true;
-      console.log('WhatsApp link opened successfully:', whatsappUrl);
+      console.log('WhatsApp URL opened successfully');
       
     } catch (error) {
-      console.error('Failed to open WhatsApp link:', error);
+      console.error('Failed to open WhatsApp:', error);
       
-      // Fallback: Show URL to user for manual copy
-      if (navigator.clipboard && window.isSecureContext) {
-        try {
-          await navigator.clipboard.writeText(whatsappUrl);
-          toast({
-            title: "WhatsApp URL Copied",
-            description: "The WhatsApp link has been copied to your clipboard. Please paste it in your browser.",
-          });
-          success = true;
-        } catch (clipboardError) {
-          console.error('Failed to copy to clipboard:', clipboardError);
-        }
-      }
-      
-      if (!success) {
-        // Final fallback: prompt user with URL
-        const userConfirmed = confirm(`Failed to open WhatsApp automatically. Would you like to copy this URL manually?\n\n${whatsappUrl}`);
-        if (userConfirmed) {
-          success = true;
-        }
-      }
+      // Fallback: Show instructions to user
+      alert(`Please copy this WhatsApp link and open it manually:\n\n${whatsappUrl}`);
     }
 
     // Log the message attempt
@@ -178,24 +146,16 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
       phoneNumber: student.contact,
       message,
       timestamp: new Date().toISOString(),
-      status: success ? 'sent' : 'failed'
+      status: 'sent'
     };
 
     const newLogs = [log, ...logs];
     saveLogs(newLogs);
 
-    if (success) {
-      toast({
-        title: "WhatsApp Opened",
-        description: `Message prepared for ${student.name}`,
-      });
-    } else {
-      toast({
-        title: "WhatsApp Failed",
-        description: `Could not open WhatsApp for ${student.name}. Please ensure WhatsApp is installed or try manually copying: +${cleanedPhone}`,
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "WhatsApp Opening",
+      description: `Redirecting to WhatsApp for ${student.name}`,
+    });
 
     if (onSingleMessage) {
       onSingleMessage(student);
