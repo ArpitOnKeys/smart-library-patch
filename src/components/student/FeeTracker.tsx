@@ -1,185 +1,424 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { Calendar, DollarSign, Clock, CheckCircle } from 'lucide-react';
 
-interface FeeRecord {
-  id: string;
-  studentId: string;
-  amount: number;
-  dueDate: string;
-  paidDate?: string;
-  status: 'pending' | 'paid' | 'overdue';
-  description: string;
-}
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { studentDb, feePaymentDb } from '@/lib/database';
+import { Student, FeePayment, ReceiptData } from '@/types/database';
+import { useToast } from '@/hooks/use-toast';
+import { IndianRupee, Download, MessageCircle, Plus, Calculator } from 'lucide-react';
+import { format } from 'date-fns';
+import { WhatsAppModal } from '@/components/whatsapp/WhatsAppModal';
 
 interface FeeTrackerProps {
-  studentId?: string;
+  refreshTrigger: number;
 }
 
-export const FeeTracker: React.FC<FeeTrackerProps> = ({ studentId }) => {
-  const [fees, setFees] = useState<FeeRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMonth, setPaymentMonth] = useState('');
+  const [paymentYear, setPaymentYear] = useState(new Date().getFullYear().toString());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Mock data for demonstration
-    const mockFees: FeeRecord[] = [
-      {
-        id: '1',
-        studentId: studentId || 'default',
-        amount: 5000,
-        dueDate: '2024-01-15',
-        status: 'paid',
-        paidDate: '2024-01-10',
-        description: 'Tuition Fee - January'
-      },
-      {
-        id: '2',
-        studentId: studentId || 'default',
-        amount: 1500,
-        dueDate: '2024-02-15',
-        status: 'pending',
-        description: 'Library Fee - February'
-      },
-      {
-        id: '3',
-        studentId: studentId || 'default',
-        amount: 3000,
-        dueDate: '2024-01-01',
-        status: 'overdue',
-        description: 'Lab Fee - January'
+    loadStudents();
+  }, [refreshTrigger]);
+
+  useEffect(() => {
+    if (selectedStudent) {
+      loadFeePayments(selectedStudent.id);
+    }
+  }, [selectedStudent]);
+
+  const loadStudents = () => {
+    const allStudents = studentDb.getAll();
+    setStudents(allStudents);
+  };
+
+  const loadFeePayments = (studentId: string) => {
+    const payments = feePaymentDb.getByStudentId(studentId);
+    setFeePayments(payments);
+  };
+
+  const getCurrentMonth = () => {
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    return months[new Date().getMonth()];
+  };
+
+  const calculateTotalPaid = () => {
+    return feePayments.reduce((total, payment) => total + payment.amount, 0);
+  };
+
+  const calculateMonthsRegistered = () => {
+    if (!selectedStudent) return 0;
+    const admissionDate = new Date(selectedStudent.admissionDate);
+    const currentDate = new Date();
+    const monthDiff = (currentDate.getFullYear() - admissionDate.getFullYear()) * 12 + 
+                     (currentDate.getMonth() - admissionDate.getMonth()) + 1;
+    return Math.max(monthDiff, 1);
+  };
+
+  const calculateTotalDue = () => {
+    if (!selectedStudent) return 0;
+    const monthsRegistered = calculateMonthsRegistered();
+    const totalExpected = selectedStudent.monthlyFees * monthsRegistered;
+    const totalPaid = calculateTotalPaid();
+    return Math.max(totalExpected - totalPaid, 0);
+  };
+
+  const handleAddPayment = async () => {
+    if (!selectedStudent || !paymentAmount || !paymentMonth) {
+      toast({
+        title: 'Error',
+        description: 'Please fill all required fields.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const amount = Number(paymentAmount);
+      if (amount <= 0) {
+        toast({
+          title: 'Error',
+          description: 'Payment amount must be greater than 0.',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
       }
+
+      // Check if payment for this month/year already exists
+      const existingPayment = feePayments.find(
+        payment => payment.month === paymentMonth && payment.year === Number(paymentYear)
+      );
+
+      if (existingPayment) {
+        toast({
+          title: 'Error',
+          description: `Payment for ${paymentMonth} ${paymentYear} already exists.`,
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      const newPayment = feePaymentDb.create({
+        studentId: selectedStudent.id,
+        amount,
+        paymentDate: new Date().toISOString(),
+        month: paymentMonth,
+        year: Number(paymentYear),
+      });
+
+      toast({
+        title: 'Payment Added!',
+        description: `₹${amount} payment recorded for ${paymentMonth} ${paymentYear}`,
+      });
+
+      loadFeePayments(selectedStudent.id);
+      setPaymentAmount('');
+      setPaymentMonth('');
+      setIsPaymentDialogOpen(false);
+      
+    } catch (error) {
+      console.error('Error adding payment:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to add payment. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const generatePDFSlip = (payment: FeePayment) => {
+    if (!selectedStudent) return;
+    
+    // Create a simple receipt text for download
+    const receiptContent = `
+PATCH - THE SMART LIBRARY
+Fee Receipt
+
+Student Name: ${selectedStudent.name}
+Father's Name: ${selectedStudent.fatherName}
+Seat Number: ${selectedStudent.seatNumber}
+Contact: ${selectedStudent.contact}
+
+Payment Details:
+Amount Paid: ₹${payment.amount}
+Month: ${payment.month} ${payment.year}
+Payment Date: ${format(new Date(payment.paymentDate), 'dd/MM/yyyy')}
+Monthly Fees: ₹${selectedStudent.monthlyFees}
+
+Total Paid: ₹${calculateTotalPaid()}
+Total Due: ₹${calculateTotalDue()}
+
+Signature: _________________
+Date: ${format(new Date(), 'dd/MM/yyyy')}
+    `;
+
+    // Create and download the file
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Fee_Receipt_${selectedStudent.name}_${payment.month}_${payment.year}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: 'Receipt Downloaded',
+      description: 'Fee receipt has been downloaded successfully.',
+    });
+  };
+
+  const sendWhatsAppMessage = async (payment: FeePayment) => {
+    if (!selectedStudent) return;
+    
+    const message = `Hello! Fee receipt for ${selectedStudent.name}:\n\nAmount: ₹${payment.amount}\nMonth: ${payment.month} ${payment.year}\nSeat: ${selectedStudent.seatNumber}\n\nTotal Due: ₹${calculateTotalDue()}\n\nThank you!\n- PATCH Library`;
+    
+    const cleanedPhone = selectedStudent.contact.replace(/\D/g, '');
+    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Try multiple automatic methods
+    const methods = [
+      () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
+      () => window.location.href = `intent://send?phone=${phoneNumber}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`,
+      () => window.open(`https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank'),
+      () => window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_self')
     ];
 
-    setTimeout(() => {
-      setFees(mockFees);
-      setLoading(false);
-    }, 1000);
-  }, [studentId]);
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'overdue':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+    let success = false;
+    for (let i = 0; i < methods.length; i++) {
+      try {
+        methods[i]();
+        success = true;
+        break;
+      } catch (error) {
+        if (i === methods.length - 1) console.error('All WhatsApp methods failed:', error);
+      }
     }
+
+    toast({
+      title: success ? 'WhatsApp Opened' : 'Install WhatsApp',
+      description: success ? 'Fee receipt message sent successfully.' : 'Please install WhatsApp to send messages.',
+      variant: success ? 'default' : 'destructive'
+    });
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'pending':
-        return <Clock className="w-4 h-4" />;
-      case 'overdue':
-        return <Calendar className="w-4 h-4" />;
-      default:
-        return null;
-    }
-  };
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
-  const totalPending = fees
-    .filter(fee => fee.status === 'pending' || fee.status === 'overdue')
-    .reduce((sum, fee) => sum + fee.amount, 0);
-
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
-            Fee Tracker
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
-            Fee Tracker
+            <IndianRupee className="h-5 w-5" />
+            Fee Tracker & Payment Manager
           </CardTitle>
+          <CardDescription>
+            Track fee payments, generate receipts, and send WhatsApp notifications
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-blue-900">Total Fees</h3>
-              <p className="text-2xl font-bold text-blue-700">
-                ₹{fees.reduce((sum, fee) => sum + fee.amount, 0).toLocaleString()}
-              </p>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-green-900">Paid</h3>
-              <p className="text-2xl font-bold text-green-700">
-                ₹{fees
-                  .filter(fee => fee.status === 'paid')
-                  .reduce((sum, fee) => sum + fee.amount, 0)
-                  .toLocaleString()}
-              </p>
-            </div>
-            <div className="bg-red-50 p-4 rounded-lg">
-              <h3 className="font-semibold text-red-900">Pending</h3>
-              <p className="text-2xl font-bold text-red-700">
-                ₹{totalPending.toLocaleString()}
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            {fees.map((fee) => (
-              <div
-                key={fee.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+          <div className="space-y-4">
+            {/* Student Selection */}
+            <div className="space-y-2">
+              <Label>Select Student</Label>
+              <Select
+                value={selectedStudent?.id || ''}
+                onValueChange={(value) => {
+                  const student = students.find(s => s.id === value);
+                  setSelectedStudent(student || null);
+                }}
               >
-                <div className="flex items-center gap-3">
-                  {getStatusIcon(fee.status)}
-                  <div>
-                    <h4 className="font-medium">{fee.description}</h4>
-                    <p className="text-sm text-gray-600">
-                      Due: {new Date(fee.dueDate).toLocaleDateString()}
-                      {fee.paidDate && (
-                        <span className="ml-2">
-                          | Paid: {new Date(fee.paidDate).toLocaleDateString()}
-                        </span>
-                      )}
-                    </p>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a student to track fees" />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.map((student) => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.name} - Seat {student.seatNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {selectedStudent && (
+              <>
+                {/* Fee Summary */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">₹{selectedStudent.monthlyFees}</div>
+                    <div className="text-sm text-muted-foreground">Monthly Fees</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">₹{calculateTotalPaid()}</div>
+                    <div className="text-sm text-muted-foreground">Total Paid</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">₹{calculateTotalDue()}</div>
+                    <div className="text-sm text-muted-foreground">Total Due</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{calculateMonthsRegistered()}</div>
+                    <div className="text-sm text-muted-foreground">Months Registered</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-semibold">₹{fee.amount.toLocaleString()}</span>
-                  <Badge className={getStatusColor(fee.status)}>
-                    {fee.status}
-                  </Badge>
-                  {fee.status !== 'paid' && (
-                    <Button size="sm" variant="outline">
-                      Pay Now
-                    </Button>
-                  )}
+
+                {/* Add Payment Button */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Payment History</h3>
+                  <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Payment
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Fee Payment</DialogTitle>
+                        <DialogDescription>
+                          Record a new fee payment for {selectedStudent.name}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Payment Amount (₹)</Label>
+                          <Input
+                            type="number"
+                            placeholder="Enter amount"
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Month</Label>
+                            <Select value={paymentMonth} onValueChange={setPaymentMonth}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select month" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {months.map((month) => (
+                                  <SelectItem key={month} value={month}>{month}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <Label>Year</Label>
+                            <Select value={paymentYear} onValueChange={setPaymentYear}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {years.map((year) => (
+                                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleAddPayment} disabled={isSubmitting}>
+                            {isSubmitting ? 'Adding...' : 'Add Payment'}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </div>
-              </div>
-            ))}
+
+                {/* Payment History Table */}
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Payment Date</TableHead>
+                        <TableHead>Month/Year</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {feePayments.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                            No payments recorded yet.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        feePayments.map((payment) => (
+                          <TableRow key={payment.id}>
+                            <TableCell>
+                              {format(new Date(payment.paymentDate), 'dd/MM/yyyy')}
+                            </TableCell>
+                            <TableCell>{payment.month} {payment.year}</TableCell>
+                            <TableCell className="font-medium">₹{payment.amount}</TableCell>
+                            <TableCell>
+                              <Badge variant="default">Paid</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => generatePDFSlip(payment)}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => sendWhatsAppMessage(payment)}
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
     </div>
   );
 };
-
-export default FeeTracker;

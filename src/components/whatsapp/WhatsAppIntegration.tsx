@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2 } from 'lucide-react';
 import { Student } from '@/types/database';
 import { WhatsAppModal } from './WhatsAppModal';
-import { sendReceiptViaWhatsApp } from '@/utils/receiptUtils';
 
 interface MessageTemplate {
   id: string;
@@ -196,22 +195,6 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     }
   };
 
-  const sendReceiptWithMessage = async (student: Student, pdfBlob: Blob) => {
-    try {
-      await sendReceiptViaWhatsApp(student, pdfBlob, `Hello ${student.name}, here is your fee receipt from PATCH Library. Thank you for your payment!`);
-      
-      toast({
-        title: "Receipt Sent via WhatsApp! 📱",
-        description: `Fee receipt sent to ${student.name}`
-      });
-    } catch (error) {
-      toast({
-        title: "Send Failed",
-        description: "Failed to send receipt via WhatsApp",
-        variant: "destructive"
-      });
-    }
-  };
   const sendBulkMessages = () => {
     if (!selectedTemplate && !customMessage) {
       toast({
