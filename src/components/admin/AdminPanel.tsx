@@ -26,6 +26,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useTheme } from 'next-themes';
 import { storage, studentDb, feePaymentDb, expenseDb, auth } from '@/lib/database';
+import { ReceiptTestPanel } from '@/components/receipts/ReceiptTestPanel';
 
 interface AppSettings {
   defaultMonthlyFee: number;
@@ -311,10 +312,12 @@ export const AdminPanel = () => {
 
       <Tabs defaultValue="general" className="space-y-4">
         <TabsList className="grid grid-cols-4 w-fit">
+        <TabsList className="grid grid-cols-5 w-fit">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="appearance">Appearance</TabsTrigger>
           <TabsTrigger value="backup">Backup</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="receipts">Receipts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-4">
@@ -750,6 +753,10 @@ export const AdminPanel = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="receipts" className="space-y-4">
+          <ReceiptTestPanel />
         </TabsContent>
       </Tabs>
     </div>

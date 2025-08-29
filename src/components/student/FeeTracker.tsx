@@ -14,6 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 import { IndianRupee, Download, MessageCircle, Plus, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
 import { WhatsAppModal } from '@/components/whatsapp/WhatsAppModal';
+import { ReceiptGenerator } from '@/components/receipts/ReceiptGenerator';
+import { BulkReceiptGenerator } from '@/components/receipts/BulkReceiptGenerator';
 
 interface FeeTrackerProps {
   refreshTrigger: number;
@@ -295,13 +297,15 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
                 {/* Add Payment Button */}
                 <div className="flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Payment History</h3>
-                  <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Payment
-                      </Button>
-                    </DialogTrigger>
+                  <div className="flex gap-2">
+                    <BulkReceiptGenerator />
+                    <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Add Payment
+                        </Button>
+                      </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
                         <DialogTitle>Add Fee Payment</DialogTitle>
@@ -392,20 +396,10 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => generatePDFSlip(payment)}
-                                >
-                                  <Download className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => sendWhatsAppMessage(payment)}
-                                >
-                                  <MessageCircle className="h-4 w-4" />
-                                </Button>
+                                <ReceiptGenerator
+                                  student={selectedStudent}
+                                  payment={payment}
+                                />
                               </div>
                             </TableCell>
                           </TableRow>
