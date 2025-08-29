@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,15 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { studentDb, feePaymentDb } from '@/lib/database';
-import { Student, FeePayment } from '@/types/database';
+import { Student, FeePayment, ReceiptData } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
-import { IndianRupee, Download, MessageCircle, Plus, Calculator, Receipt, Users } from 'lucide-react';
+import { IndianRupee, Download, MessageCircle, Plus, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
-import { EnhancedReceiptGenerator } from '@/components/receipts/EnhancedReceiptGenerator';
-import { BulkReceiptGenerator } from '@/components/receipts/BulkReceiptGenerator';
-import { ReceiptPreviewPanel } from '@/components/receipts/ReceiptPreviewPanel';
+import { WhatsAppModal } from '@/components/whatsapp/WhatsAppModal';
 
 interface FeeTrackerProps {
   refreshTrigger: number;
@@ -30,7 +28,6 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
   const [paymentMonth, setPaymentMonth] = useState('');
   const [paymentYear, setPaymentYear] = useState(new Date().getFullYear().toString());
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   useEffect(() => {
@@ -151,22 +148,82 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
     }
   };
 
-  const handleStudentSelection = (studentId: string, checked: boolean) => {
-    const newSelected = new Set(selectedStudents);
-    if (checked) {
-      newSelected.add(studentId);
-    } else {
-      newSelected.delete(studentId);
-    }
-    setSelectedStudents(newSelected);
+  const generatePDFSlip = (payment: FeePayment) => {
+    if (!selectedStudent) return;
+    
+    // Create a simple receipt text for download
+    const receiptContent = `
+PATCH - THE SMART LIBRARY
+Fee Receipt
+
+Student Name: ${selectedStudent.name}
+Father's Name: ${selectedStudent.fatherName}
+Seat Number: ${selectedStudent.seatNumber}
+Contact: ${selectedStudent.contact}
+
+Payment Details:
+Amount Paid: ₹${payment.amount}
+Month: ${payment.month} ${payment.year}
+Payment Date: ${format(new Date(payment.paymentDate), 'dd/MM/yyyy')}
+Monthly Fees: ₹${selectedStudent.monthlyFees}
+
+Total Paid: ₹${calculateTotalPaid()}
+Total Due: ₹${calculateTotalDue()}
+
+Signature: _________________
+Date: ${format(new Date(), 'dd/MM/yyyy')}
+    `;
+
+    // Create and download the file
+    const blob = new Blob([receiptContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Fee_Receipt_${selectedStudent.name}_${payment.month}_${payment.year}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toast({
+      title: 'Receipt Downloaded',
+      description: 'Fee receipt has been downloaded successfully.',
+    });
   };
 
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedStudents(new Set(students.map(s => s.id)));
-    } else {
-      setSelectedStudents(new Set());
+  const sendWhatsAppMessage = async (payment: FeePayment) => {
+    if (!selectedStudent) return;
+    
+    const message = `Hello! Fee receipt for ${selectedStudent.name}:\n\nAmount: ₹${payment.amount}\nMonth: ${payment.month} ${payment.year}\nSeat: ${selectedStudent.seatNumber}\n\nTotal Due: ₹${calculateTotalDue()}\n\nThank you!\n- PATCH Library`;
+    
+    const cleanedPhone = selectedStudent.contact.replace(/\D/g, '');
+    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Try multiple automatic methods
+    const methods = [
+      () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
+      () => window.location.href = `intent://send?phone=${phoneNumber}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`,
+      () => window.open(`https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank'),
+      () => window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_self')
+    ];
+
+    let success = false;
+    for (let i = 0; i < methods.length; i++) {
+      try {
+        methods[i]();
+        success = true;
+        break;
+      } catch (error) {
+        if (i === methods.length - 1) console.error('All WhatsApp methods failed:', error);
+      }
     }
+
+    toast({
+      title: success ? 'WhatsApp Opened' : 'Install WhatsApp',
+      description: success ? 'Fee receipt message sent successfully.' : 'Please install WhatsApp to send messages.',
+      variant: success ? 'default' : 'destructive'
+    });
   };
 
   const months = [
@@ -178,285 +235,190 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="individual" className="w-full">
-        <TabsList className="grid grid-cols-4 w-fit">
-          <TabsTrigger value="individual">Individual Tracking</TabsTrigger>
-          <TabsTrigger value="bulk">Bulk Generation</TabsTrigger>
-          <TabsTrigger value="preview">Receipt Preview</TabsTrigger>
-          <TabsTrigger value="enhanced">Enhanced Generator</TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <IndianRupee className="h-5 w-5" />
+            Fee Tracker & Payment Manager
+          </CardTitle>
+          <CardDescription>
+            Track fee payments, generate receipts, and send WhatsApp notifications
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Student Selection */}
+            <div className="space-y-2">
+              <Label>Select Student</Label>
+              <Select
+                value={selectedStudent?.id || ''}
+                onValueChange={(value) => {
+                  const student = students.find(s => s.id === value);
+                  setSelectedStudent(student || null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a student to track fees" />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.map((student) => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.name} - Seat {student.seatNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <TabsContent value="individual" className="space-y-4">
-          <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IndianRupee className="h-5 w-5" />
-                Individual Fee Tracker & Receipt Generator
-              </CardTitle>
-              <CardDescription>
-                Track fee payments and generate styled PDF receipts with WhatsApp integration
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {/* Student Selection */}
-                <div className="space-y-2">
-                  <Label>Select Student</Label>
-                  <Select
-                    value={selectedStudent?.id || ''}
-                    onValueChange={(value) => {
-                      const student = students.find(s => s.id === value);
-                      setSelectedStudent(student || null);
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a student to track fees" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {students.map((student) => (
-                        <SelectItem key={student.id} value={student.id}>
-                          {student.name} - Seat {student.seatNumber}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+            {selectedStudent && (
+              <>
+                {/* Fee Summary */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-primary">₹{selectedStudent.monthlyFees}</div>
+                    <div className="text-sm text-muted-foreground">Monthly Fees</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-green-600">₹{calculateTotalPaid()}</div>
+                    <div className="text-sm text-muted-foreground">Total Paid</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-red-600">₹{calculateTotalDue()}</div>
+                    <div className="text-sm text-muted-foreground">Total Due</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold">{calculateMonthsRegistered()}</div>
+                    <div className="text-sm text-muted-foreground">Months Registered</div>
+                  </div>
                 </div>
 
-                {selectedStudent && (
-                  <>
-                    {/* Fee Summary */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-primary">₹{selectedStudent.monthlyFees}</div>
-                        <div className="text-sm text-muted-foreground">Monthly Fees</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-green-600">₹{calculateTotalPaid()}</div>
-                        <div className="text-sm text-muted-foreground">Total Paid</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-red-600">₹{calculateTotalDue()}</div>
-                        <div className="text-sm text-muted-foreground">Total Due</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-2xl font-bold">{calculateMonthsRegistered()}</div>
-                        <div className="text-sm text-muted-foreground">Months Registered</div>
-                      </div>
-                    </div>
-
-                    {/* Add Payment Button */}
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-lg font-semibold">Payment History</h3>
-                      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Payment
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Add Fee Payment</DialogTitle>
-                            <DialogDescription>
-                              Record a new fee payment for {selectedStudent.name}
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <div>
-                              <Label>Payment Amount (₹)</Label>
-                              <Input
-                                type="number"
-                                placeholder="Enter amount"
-                                value={paymentAmount}
-                                onChange={(e) => setPaymentAmount(e.target.value)}
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div>
-                                <Label>Month</Label>
-                                <Select value={paymentMonth} onValueChange={setPaymentMonth}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Select month" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {months.map((month) => (
-                                      <SelectItem key={month} value={month}>{month}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div>
-                                <Label>Year</Label>
-                                <Select value={paymentYear} onValueChange={setPaymentYear}>
-                                  <SelectTrigger>
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {years.map((year) => (
-                                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                              <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
-                                Cancel
-                              </Button>
-                              <Button onClick={handleAddPayment} disabled={isSubmitting}>
-                                {isSubmitting ? 'Adding...' : 'Add Payment'}
-                              </Button>
-                            </div>
+                {/* Add Payment Button */}
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Payment History</h3>
+                  <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Payment
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>Add Fee Payment</DialogTitle>
+                        <DialogDescription>
+                          Record a new fee payment for {selectedStudent.name}
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Payment Amount (₹)</Label>
+                          <Input
+                            type="number"
+                            placeholder="Enter amount"
+                            value={paymentAmount}
+                            onChange={(e) => setPaymentAmount(e.target.value)}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <Label>Month</Label>
+                            <Select value={paymentMonth} onValueChange={setPaymentMonth}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select month" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {months.map((month) => (
+                                  <SelectItem key={month} value={month}>{month}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                          <div>
+                            <Label>Year</Label>
+                            <Select value={paymentYear} onValueChange={setPaymentYear}>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {years.map((year) => (
+                                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleAddPayment} disabled={isSubmitting}>
+                            {isSubmitting ? 'Adding...' : 'Add Payment'}
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
 
-                    {/* Payment History Table */}
-                    <div className="border rounded-md">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Payment Date</TableHead>
-                            <TableHead>Month/Year</TableHead>
-                            <TableHead>Amount</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                {/* Payment History Table */}
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Payment Date</TableHead>
+                        <TableHead>Month/Year</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {feePayments.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                            No payments recorded yet.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        feePayments.map((payment) => (
+                          <TableRow key={payment.id}>
+                            <TableCell>
+                              {format(new Date(payment.paymentDate), 'dd/MM/yyyy')}
+                            </TableCell>
+                            <TableCell>{payment.month} {payment.year}</TableCell>
+                            <TableCell className="font-medium">₹{payment.amount}</TableCell>
+                            <TableCell>
+                              <Badge variant="default">Paid</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => generatePDFSlip(payment)}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => sendWhatsAppMessage(payment)}
+                                >
+                                  <MessageCircle className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {feePayments.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                                No payments recorded yet.
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            feePayments.map((payment) => (
-                              <TableRow key={payment.id}>
-                                <TableCell>
-                                  {format(new Date(payment.paymentDate), 'dd/MM/yyyy')}
-                                </TableCell>
-                                <TableCell>{payment.month} {payment.year}</TableCell>
-                                <TableCell className="font-medium">₹{payment.amount}</TableCell>
-                                <TableCell>
-                                  <Badge variant="default">Paid</Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <div className="flex justify-end gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        // Generate receipt for existing payment
-                                        const receiptData = {
-                                          receiptNumber: `PATCH${Date.now()}`,
-                                          studentName: selectedStudent.name,
-                                          enrollmentNo: selectedStudent.enrollmentNo,
-                                          fatherName: selectedStudent.fatherName,
-                                          contact: selectedStudent.contact,
-                                          seatNumber: selectedStudent.seatNumber,
-                                          amount: payment.amount,
-                                          month: payment.month,
-                                          year: payment.year,
-                                          paymentDate: payment.paymentDate,
-                                          monthlyFees: selectedStudent.monthlyFees,
-                                          totalPaid: calculateTotalPaid(),
-                                          totalDue: calculateTotalDue(),
-                                          monthsRegistered: calculateMonthsRegistered()
-                                        };
-                                        
-                                        // Simple text receipt for existing payments
-                                        const content = `
-PATCH - THE SMART LIBRARY
-Fee Receipt
-
-Receipt No: ${receiptData.receiptNumber}
-Date: ${format(new Date(payment.paymentDate), 'dd/MM/yyyy')}
-
-Student: ${selectedStudent.name}
-Amount: ₹${payment.amount}
-Month: ${payment.month} ${payment.year}
-Seat: ${selectedStudent.seatNumber}
-
-Thank you for your payment!
-                                        `.trim();
-                                        
-                                        const blob = new Blob([content], { type: 'text/plain' });
-                                        const url = URL.createObjectURL(blob);
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = `Receipt_${selectedStudent.name}_${payment.month}_${payment.year}.txt`;
-                                        a.click();
-                                        URL.revokeObjectURL(url);
-                                      }}
-                                    >
-                                      <Download className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => {
-                                        const message = `Hello ${selectedStudent.name}! Your fee payment of ₹${payment.amount} for ${payment.month} ${payment.year} has been received. Receipt No: PATCH${Date.now()}. Thank you! - PATCH Library`;
-                                        const cleanedPhone = selectedStudent.contact.replace(/\D/g, '');
-                                        const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
-                                        const encodedMessage = encodeURIComponent(message);
-                                        window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_blank');
-                                      }}
-                                    >
-                                      <MessageCircle className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="enhanced" className="space-y-4">
-          {selectedStudent ? (
-            <EnhancedReceiptGenerator 
-              student={selectedStudent}
-              onReceiptGenerated={() => {
-                loadFeePayments(selectedStudent.id);
-                toast({
-                  title: 'Payment Recorded',
-                  description: 'Payment has been added to the system'
-                });
-              }}
-            />
-          ) : (
-            <Card className="glass-card">
-              <CardContent className="text-center py-8">
-                <Receipt className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-lg font-semibold mb-2">Select a Student</h3>
-                <p className="text-muted-foreground">
-                  Choose a student from the Individual Tracking tab to use the enhanced receipt generator
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="bulk" className="space-y-4">
-          <BulkReceiptGenerator 
-            students={students}
-            selectedStudents={students.filter(s => selectedStudents.has(s.id))}
-          />
-        </TabsContent>
-
-        <TabsContent value="preview" className="space-y-4">
-          <ReceiptPreviewPanel />
-        </TabsContent>
-      </Tabs>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
