@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2 } from 'lucide-react';
 import { Student } from '@/types/database';
 import { WhatsAppModal } from './WhatsAppModal';
+import { generateReceiptData, generateReceiptBlob } from '@/utils/receiptGenerator';
 
 interface MessageTemplate {
   id: string;
@@ -65,6 +66,8 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   const [newTemplate, setNewTemplate] = useState({ name: '', content: '' });
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -296,6 +299,98 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     return formatMessage(messageTemplate, previewStudent);
   };
 
+  const sendTestReceipt = async () => {
+    if (!testPhoneNumber.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a phone number",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (students.length === 0) {
+      toast({
+        title: "Error",
+        description: "No students available for sample receipt",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingTest(true);
+
+    try {
+      // Use first student as sample
+      const sampleStudent = students[0];
+      
+      // Create sample payment data
+      const samplePayment = {
+        id: 'sample',
+        studentId: sampleStudent.id,
+        amount: sampleStudent.monthlyFees,
+        paymentDate: new Date().toISOString(),
+        month: new Date().toLocaleDateString('en-US', { month: 'long' }),
+        year: new Date().getFullYear(),
+        createdAt: new Date().toISOString()
+      };
+
+      const receiptData = generateReceiptData(sampleStudent, samplePayment);
+      receiptData.totalPaid = sampleStudent.monthlyFees;
+      receiptData.totalDue = 0;
+      
+      // Generate PDF blob
+      const pdfBlob = generateReceiptBlob(receiptData);
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      // Prepare WhatsApp message
+      const message = `📄 SAMPLE RECEIPT from PATCH Library\n\nThis is a test receipt for ${sampleStudent.name}\nAmount: ₹${samplePayment.amount}\n\nPowered by PATCH - The Smart Library 📚`;
+      
+      const cleanedPhone = testPhoneNumber.replace(/\D/g, '');
+      const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+      const encodedMessage = encodeURIComponent(message);
+      
+      // Try multiple automatic methods
+      const methods = [
+        () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
+        () => window.location.href = `intent://send?phone=${phoneNumber}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`,
+        () => window.open(`https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank'),
+        () => window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_self')
+      ];
+
+      let success = false;
+      for (let i = 0; i < methods.length; i++) {
+        try {
+          methods[i]();
+          success = true;
+          break;
+        } catch (error) {
+          if (i === methods.length - 1) console.error('All WhatsApp methods failed:', error);
+        }
+      }
+
+      toast({
+        title: success ? 'Test Receipt Sent' : 'Install WhatsApp',
+        description: success ? 'Sample receipt sent via WhatsApp successfully.' : 'Please install WhatsApp to send test receipt.',
+        variant: success ? 'default' : 'destructive'
+      });
+      
+      // Clean up the temporary URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(pdfUrl);
+      }, 5000);
+      
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate test receipt. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Message Composer */}
@@ -410,6 +505,58 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
                 </div>
               </DialogContent>
             </Dialog>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Test Receipt Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Send Sample Receipt</CardTitle>
+          <CardDescription>
+            Test the receipt generation and WhatsApp integration
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <Label htmlFor="test-phone">Test Phone Number</Label>
+              <Input
+                id="test-phone"
+                placeholder="Enter phone number (e.g., 9876543210)"
+                value={testPhoneNumber}
+                onChange={(e) => setTestPhoneNumber(e.target.value)}
+                maxLength={10}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Enter 10-digit mobile number without country code
+              </p>
+            </div>
+            <div className="flex items-end">
+              <Button 
+                onClick={sendTestReceipt}
+                disabled={isSendingTest || !testPhoneNumber.trim()}
+                className="flex items-center gap-2"
+              >
+                {isSendingTest ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    Send Sample Receipt
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+          
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              💡 This will generate a professional PDF receipt using the first student's data and send it via WhatsApp to the specified number.
+            </p>
           </div>
         </CardContent>
       </Card>
