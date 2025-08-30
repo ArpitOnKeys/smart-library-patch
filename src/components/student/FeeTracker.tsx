@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { IndianRupee, Download, MessageCircle, Plus, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
 import { WhatsAppModal } from '@/components/whatsapp/WhatsAppModal';
+import { generateReceiptData, downloadReceipt, generateReceiptBlob } from '@/utils/receiptGenerator';
 
 interface FeeTrackerProps {
   refreshTrigger: number;
@@ -151,79 +152,84 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
   const generatePDFSlip = (payment: FeePayment) => {
     if (!selectedStudent) return;
     
-    // Create a simple receipt text for download
-    const receiptContent = `
-PATCH - THE SMART LIBRARY
-Fee Receipt
+    try {
+      const receiptData = generateReceiptData(selectedStudent, payment);
+      receiptData.totalPaid = calculateTotalPaid();
+      receiptData.totalDue = calculateTotalDue();
+      
+      downloadReceipt(receiptData);
 
-Student Name: ${selectedStudent.name}
-Father's Name: ${selectedStudent.fatherName}
-Seat Number: ${selectedStudent.seatNumber}
-Contact: ${selectedStudent.contact}
-
-Payment Details:
-Amount Paid: ₹${payment.amount}
-Month: ${payment.month} ${payment.year}
-Payment Date: ${format(new Date(payment.paymentDate), 'dd/MM/yyyy')}
-Monthly Fees: ₹${selectedStudent.monthlyFees}
-
-Total Paid: ₹${calculateTotalPaid()}
-Total Due: ₹${calculateTotalDue()}
-
-Signature: _________________
-Date: ${format(new Date(), 'dd/MM/yyyy')}
-    `;
-
-    // Create and download the file
-    const blob = new Blob([receiptContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Fee_Receipt_${selectedStudent.name}_${payment.month}_${payment.year}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    toast({
-      title: 'Receipt Downloaded',
-      description: 'Fee receipt has been downloaded successfully.',
-    });
+      toast({
+        title: 'Receipt Downloaded',
+        description: 'Professional fee receipt has been downloaded successfully.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate receipt. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const sendWhatsAppMessage = async (payment: FeePayment) => {
+  const sendWhatsAppReceipt = async (payment: FeePayment) => {
     if (!selectedStudent) return;
     
-    const message = `Hello! Fee receipt for ${selectedStudent.name}:\n\nAmount: ₹${payment.amount}\nMonth: ${payment.month} ${payment.year}\nSeat: ${selectedStudent.seatNumber}\n\nTotal Due: ₹${calculateTotalDue()}\n\nThank you!\n- PATCH Library`;
-    
-    const cleanedPhone = selectedStudent.contact.replace(/\D/g, '');
-    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
-    const encodedMessage = encodeURIComponent(message);
-    
-    // Try multiple automatic methods
-    const methods = [
-      () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
-      () => window.location.href = `intent://send?phone=${phoneNumber}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`,
-      () => window.open(`https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank'),
-      () => window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_self')
-    ];
+    try {
+      const receiptData = generateReceiptData(selectedStudent, payment);
+      receiptData.totalPaid = calculateTotalPaid();
+      receiptData.totalDue = calculateTotalDue();
+      
+      // Generate PDF blob
+      const pdfBlob = generateReceiptBlob(receiptData);
+      
+      // Create a temporary URL for the PDF
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      
+      // Prepare WhatsApp message
+      const message = `Hello ${selectedStudent.name}! 📄\n\nYour fee receipt for ${payment.month} ${payment.year} is ready.\n\nAmount Paid: ₹${payment.amount}\nSeat: ${selectedStudent.seatNumber}\nTotal Due: ₹${calculateTotalDue()}\n\nThank you for choosing PATCH Library! 🙏\n\n- PATCH Team`;
+      
+      const cleanedPhone = selectedStudent.contact.replace(/\D/g, '');
+      const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+      const encodedMessage = encodeURIComponent(message);
+      
+      // Try multiple automatic methods
+      const methods = [
+        () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
+        () => window.location.href = `intent://send?phone=${phoneNumber}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`,
+        () => window.open(`https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank'),
+        () => window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_self')
+      ];
 
-    let success = false;
-    for (let i = 0; i < methods.length; i++) {
-      try {
-        methods[i]();
-        success = true;
-        break;
-      } catch (error) {
-        if (i === methods.length - 1) console.error('All WhatsApp methods failed:', error);
+      let success = false;
+      for (let i = 0; i < methods.length; i++) {
+        try {
+          methods[i]();
+          success = true;
+          break;
+        } catch (error) {
+          if (i === methods.length - 1) console.error('All WhatsApp methods failed:', error);
+        }
       }
-    }
 
-    toast({
-      title: success ? 'WhatsApp Opened' : 'Install WhatsApp',
-      description: success ? 'Fee receipt message sent successfully.' : 'Please install WhatsApp to send messages.',
-      variant: success ? 'default' : 'destructive'
-    });
+      toast({
+        title: success ? 'WhatsApp Opened' : 'Install WhatsApp',
+        description: success ? 'Receipt message sent successfully. PDF can be shared manually.' : 'Please install WhatsApp to send messages.',
+        variant: success ? 'default' : 'destructive'
+      });
+      
+      // Clean up the temporary URL after a delay
+      setTimeout(() => {
+        URL.revokeObjectURL(pdfUrl);
+      }, 5000);
+      
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to generate receipt for WhatsApp. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const months = [
@@ -396,13 +402,15 @@ Date: ${format(new Date(), 'dd/MM/yyyy')}
                                   variant="outline"
                                   size="sm"
                                   onClick={() => generatePDFSlip(payment)}
+                                  title="Download Professional Receipt"
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => sendWhatsAppMessage(payment)}
+                                  onClick={() => sendWhatsAppReceipt(payment)}
+                                  title="Send Receipt via WhatsApp"
                                 >
                                   <MessageCircle className="h-4 w-4" />
                                 </Button>
