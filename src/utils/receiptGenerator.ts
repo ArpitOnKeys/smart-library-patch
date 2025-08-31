@@ -370,3 +370,50 @@ export const generateReceiptBlob = (receiptData: ReceiptData): Blob => {
   const pdf = generateProfessionalReceipt(receiptData);
   return pdf.output('blob');
 };
+
+// Auto-send receipt via WhatsApp
+export const sendReceiptViaWhatsApp = async (receiptData: ReceiptData): Promise<boolean> => {
+  try {
+    // Generate PDF blob
+    const pdfBlob = generateReceiptBlob(receiptData);
+    
+    // Create temporary URL for PDF
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+    
+    // Prepare WhatsApp message
+    const message = `📄 Fee Receipt - PATCH Library\n\nDear ${receiptData.studentName},\n\nYour fee receipt for ${receiptData.month} ${receiptData.year} is ready.\n\n💰 Amount Paid: ₹${receiptData.amount}\n🪑 Seat: ${receiptData.seatNumber}\n📅 Date: ${new Date(receiptData.paymentDate).toLocaleDateString('en-IN')}\n\nThank you for choosing PATCH Library! 🙏\n\n- PATCH Team`;
+    
+    const cleanedPhone = receiptData.contact.replace(/\D/g, '');
+    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+    const encodedMessage = encodeURIComponent(message);
+    
+    // Try multiple automatic methods for WhatsApp
+    const methods = [
+      () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
+      () => window.location.href = `intent://send?phone=${phoneNumber}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`,
+      () => window.open(`https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank'),
+      () => window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_self')
+    ];
+
+    let success = false;
+    for (let i = 0; i < methods.length; i++) {
+      try {
+        methods[i]();
+        success = true;
+        break;
+      } catch (error) {
+        if (i === methods.length - 1) console.error('All WhatsApp methods failed:', error);
+      }
+    }
+
+    // Clean up the temporary URL after a delay
+    setTimeout(() => {
+      URL.revokeObjectURL(pdfUrl);
+    }, 5000);
+
+    return success;
+  } catch (error) {
+    console.error('Error sending receipt via WhatsApp:', error);
+    return false;
+  }
+};

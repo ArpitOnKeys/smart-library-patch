@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { IndianRupee, Download, MessageCircle, Plus, Calculator } from 'lucide-react';
 import { format } from 'date-fns';
 import { WhatsAppModal } from '@/components/whatsapp/WhatsAppModal';
-import { generateReceiptData, downloadReceipt, generateReceiptBlob } from '@/utils/receiptGenerator';
+import { generateReceiptData, downloadReceipt, sendReceiptViaWhatsApp } from '@/utils/receiptGenerator';
 
 interface FeeTrackerProps {
   refreshTrigger: number;
@@ -180,48 +180,14 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
       receiptData.totalPaid = calculateTotalPaid();
       receiptData.totalDue = calculateTotalDue();
       
-      // Generate PDF blob
-      const pdfBlob = generateReceiptBlob(receiptData);
-      
-      // Create a temporary URL for the PDF
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      
-      // Prepare WhatsApp message
-      const message = `Hello ${selectedStudent.name}! 📄\n\nYour fee receipt for ${payment.month} ${payment.year} is ready.\n\nAmount Paid: ₹${payment.amount}\nSeat: ${selectedStudent.seatNumber}\nTotal Due: ₹${calculateTotalDue()}\n\nThank you for choosing PATCH Library! 🙏\n\n- PATCH Team`;
-      
-      const cleanedPhone = selectedStudent.contact.replace(/\D/g, '');
-      const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
-      const encodedMessage = encodeURIComponent(message);
-      
-      // Try multiple automatic methods
-      const methods = [
-        () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
-        () => window.location.href = `intent://send?phone=${phoneNumber}&text=${encodedMessage}#Intent;scheme=whatsapp;package=com.whatsapp;end`,
-        () => window.open(`https://web.whatsapp.com/send/?phone=${phoneNumber}&text=${encodedMessage}&type=phone_number&app_absent=0`, '_blank'),
-        () => window.open(`https://wa.me/${phoneNumber}?text=${encodedMessage}`, '_self')
-      ];
-
-      let success = false;
-      for (let i = 0; i < methods.length; i++) {
-        try {
-          methods[i]();
-          success = true;
-          break;
-        } catch (error) {
-          if (i === methods.length - 1) console.error('All WhatsApp methods failed:', error);
-        }
-      }
+      // Send receipt via WhatsApp automatically
+      const success = await sendReceiptViaWhatsApp(receiptData);
 
       toast({
         title: success ? 'WhatsApp Opened' : 'Install WhatsApp',
-        description: success ? 'Receipt message sent successfully. PDF can be shared manually.' : 'Please install WhatsApp to send messages.',
+        description: success ? 'Professional receipt sent via WhatsApp successfully.' : 'Please install WhatsApp to send receipt.',
         variant: success ? 'default' : 'destructive'
       });
-      
-      // Clean up the temporary URL after a delay
-      setTimeout(() => {
-        URL.revokeObjectURL(pdfUrl);
-      }, 5000);
       
     } catch (error) {
       toast({
@@ -402,7 +368,7 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => generatePDFSlip(payment)}
-                                  title="Download Professional Receipt"
+                                  title="Download Receipt"
                                 >
                                   <Download className="h-4 w-4" />
                                 </Button>
@@ -410,7 +376,7 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => sendWhatsAppReceipt(payment)}
-                                  title="Send Receipt via WhatsApp"
+                                  title="Send via WhatsApp"
                                 >
                                   <MessageCircle className="h-4 w-4" />
                                 </Button>
