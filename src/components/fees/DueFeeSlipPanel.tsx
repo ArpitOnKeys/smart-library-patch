@@ -14,7 +14,6 @@ import { useToast } from '@/hooks/use-toast';
 import { MessageCircle, Search, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { WhatsAppModal } from '@/components/whatsapp/WhatsAppModal';
-import { generateReceiptData, sendReceiptViaWhatsApp } from '@/utils/receiptGenerator';
 
 interface StudentDueInfo extends Student {
   totalPaid: number;
@@ -103,14 +102,14 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
   };
 
   const sendWhatsAppReminder = async (student: StudentDueInfo) => {
+    const currentMonth = format(new Date(), 'MMMM yyyy');
+    const message = `Dear ${student.name}, your fee of ₹${student.totalDue} for ${currentMonth} is due. Please pay soon. - PATCH Library`;
+    
+    const cleanedPhone = student.contact.replace(/\D/g, '');
+    const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
+    const encodedMessage = encodeURIComponent(message);
+    
     try {
-      const currentMonth = format(new Date(), 'MMMM yyyy');
-      const message = `Dear ${student.name}, 📋\n\nYour fee of ₹${student.totalDue} for ${currentMonth} is due. Please pay soon.\n\nFor any queries, contact us.\n\nThank you! 🙏\n- PATCH Library Team`;
-      
-      const cleanedPhone = student.contact.replace(/\D/g, '');
-      const phoneNumber = cleanedPhone.startsWith('91') ? cleanedPhone : '91' + cleanedPhone;
-      const encodedMessage = encodeURIComponent(message);
-      
       // Log the reminder attempt
       const { storage } = await import('@/lib/database');
       const logs = storage.get('patch_whatsapp_logs') || [];
@@ -126,7 +125,6 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
       logs.push(newLog);
       storage.set('patch_whatsapp_logs', logs);
       
-      // Try multiple automatic methods
       // Try multiple automatic methods
       const methods = [
         () => window.location.href = `whatsapp://send?phone=${phoneNumber}&text=${encodedMessage}`,
@@ -279,10 +277,9 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
                             variant="outline"
                             size="sm"
                             onClick={() => sendWhatsAppReminder(student)}
-                            className="flex items-center gap-1"
                           >
                             <MessageCircle className="h-4 w-4 mr-2" />
-                            Reminder
+                            Send Reminder
                           </Button>
                         )}
                       </TableCell>
