@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { MessageCircle, Search, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { WhatsAppModal } from '@/components/whatsapp/WhatsAppModal';
-import { generateReceiptData, generateReceiptBlob } from '@/utils/receiptGenerator';
+import { generateReceiptData, sendReceiptViaWhatsApp } from '@/utils/receiptGenerator';
 
 interface StudentDueInfo extends Student {
   totalPaid: number;
@@ -279,9 +279,10 @@ export const DueFeeSlipPanel = ({ onReminderSent }: DueFeeSlipPanelProps) => {
                             variant="outline"
                             size="sm"
                             onClick={() => sendWhatsAppReminder(student)}
+                            className="flex items-center gap-1"
                           >
                             <MessageCircle className="h-4 w-4 mr-2" />
-                            Send Reminder
+                            Reminder
                           </Button>
                         )}
                       </TableCell>
