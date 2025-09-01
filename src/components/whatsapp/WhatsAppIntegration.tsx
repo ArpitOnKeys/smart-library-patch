@@ -8,9 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2 } from 'lucide-react';
+import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Receipt } from 'lucide-react';
 import { Student } from '@/types/database';
-import { WhatsAppModal } from './WhatsAppModal';
+import { generateFeeReceiptPDF, prepareReceiptData, sendReceiptViaWhatsApp as sendReceiptWhatsApp } from '@/utils/receiptGenerator';
 
 interface MessageTemplate {
   id: string;
@@ -65,6 +65,7 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   const [newTemplate, setNewTemplate] = useState({ name: '', content: '' });
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
+  const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -296,6 +297,61 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     return formatMessage(messageTemplate, previewStudent);
   };
 
+  const sendSampleReceipt = async () => {
+    if (!testPhoneNumber) {
+      toast({
+        title: "Error",
+        description: "Please enter a phone number for testing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (students.length === 0) {
+      toast({
+        title: "Error", 
+        description: "No students available for sample receipt",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Use first student as sample data
+      const sampleStudent = students[0];
+      
+      // Create sample payment data
+      const samplePayment = {
+        id: 'sample-' + Date.now(),
+        studentId: sampleStudent.id,
+        amount: sampleStudent.monthlyFees,
+        paymentDate: new Date().toISOString(),
+        month: 'Sample',
+        year: new Date().getFullYear(),
+        createdAt: new Date().toISOString()
+      };
+
+      // Prepare receipt data with test phone number
+      const receiptData = prepareReceiptData(sampleStudent, samplePayment, sampleStudent.monthlyFees, 0);
+      receiptData.contact = testPhoneNumber; // Override with test number
+      receiptData.slipNo = 'SAMPLE-' + Date.now().toString().slice(-6);
+      
+      await sendReceiptWhatsApp(receiptData);
+      
+      toast({
+        title: "Sample Receipt Sent",
+        description: `Test receipt sent to ${testPhoneNumber}`,
+      });
+    } catch (error) {
+      console.error('Error sending sample receipt:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send sample receipt. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Message Composer */}
@@ -364,7 +420,7 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
             </div>
           )}
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button onClick={sendBulkMessages} className="flex items-center gap-2">
               <Send className="h-4 w-4" />
               Send to {selectedStudents.length > 0 ? `${selectedStudents.length} Selected` : 'All Students'}
@@ -410,6 +466,33 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
                 </div>
               </DialogContent>
             </Dialog>
+          </div>
+
+          {/* Sample Receipt Test Section */}
+          <div className="mt-6 p-4 border rounded-lg bg-muted/50">
+            <div className="flex items-center gap-2 mb-3">
+              <Receipt className="h-4 w-4" />
+              <Label className="font-medium">Test Premium Receipt</Label>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter phone number for testing"
+                value={testPhoneNumber}
+                onChange={(e) => setTestPhoneNumber(e.target.value)}
+                className="flex-1"
+              />
+              <Button 
+                variant="outline" 
+                onClick={sendSampleReceipt}
+                disabled={!testPhoneNumber}
+              >
+                <Receipt className="h-4 w-4 mr-2" />
+                Send Sample Receipt
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              This will generate a premium PDF receipt with sample data and send it via WhatsApp
+            </p>
           </div>
         </CardContent>
       </Card>
