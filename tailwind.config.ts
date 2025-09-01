@@ -21,6 +21,8 @@ export default {
 		extend: {
 			fontFamily: {
 				inter: ['Inter', 'sans-serif'],
+				montserrat: ['Montserrat', 'sans-serif'],
+				poppins: ['Poppins', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
@@ -30,6 +32,7 @@ export default {
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
+					glow: 'hsl(var(--primary-glow))',
 					foreground: 'hsl(var(--primary-foreground))'
 				},
 				secondary: {
@@ -55,6 +58,21 @@ export default {
 				card: {
 					DEFAULT: 'hsl(var(--card))',
 					foreground: 'hsl(var(--card-foreground))'
+				},
+				golden: {
+					DEFAULT: 'hsl(var(--golden))',
+					foreground: 'hsl(var(--golden-foreground))'
+				},
+				glow: {
+					cyan: 'hsl(var(--glow-cyan))',
+					blue: 'hsl(var(--glow-blue))',
+					violet: 'hsl(var(--glow-violet))',
+					golden: 'hsl(var(--glow-golden))'
+				},
+				glass: {
+					primary: 'hsl(var(--glass-text-primary))',
+					secondary: 'hsl(var(--glass-text-secondary))',
+					muted: 'hsl(var(--glass-text-muted))'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
@@ -106,13 +124,42 @@ export default {
 					'50%': {
 						opacity: '0.7'
 					}
+				},
+				'glow-pulse': {
+					'0%, 100%': {
+						boxShadow: '0 0 20px hsl(var(--glow-cyan))/30%'
+					},
+					'50%': {
+						boxShadow: '0 0 40px hsl(var(--glow-cyan))/60%, 0 0 60px hsl(var(--glow-blue))/40%'
+					}
+				},
+				'float': {
+					'0%, 100%': {
+						transform: 'translateY(0px)'
+					},
+					'50%': {
+						transform: 'translateY(-10px)'
+					}
+				},
+				'scale-in': {
+					'0%': {
+						transform: 'scale(0.8)',
+						opacity: '0'
+					},
+					'100%': {
+						transform: 'scale(1)',
+						opacity: '1'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
 				'accordion-up': 'accordion-up 0.2s ease-out',
 				'fade-in': 'fade-in 0.3s ease-out',
-				'pulse-slow': 'pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+				'pulse-slow': 'pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+				'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
+				'float': 'float 4s ease-in-out infinite',
+				'scale-in': 'scale-in 0.5s ease-out'
 			}
 		}
 	},
