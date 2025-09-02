@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Receipt } from 'lucide-react';
 import { Student } from '@/types/database';
@@ -116,6 +116,8 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   const [showTemplateDialog, setShowTemplateDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<MessageTemplate | null>(null);
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
+  const [showBroadcastDialog, setShowBroadcastDialog] = useState(false);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -274,7 +276,7 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     });
   };
 
-  const sendToAllStudents = () => {
+  const sendToAllStudents = async () => {
     if (!selectedTemplate && !customMessage) {
       toast({
         title: "Error",
@@ -293,27 +295,40 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
       return;
     }
 
+    setShowBroadcastDialog(true);
+  };
+
+  const confirmBroadcast = async () => {
+    setIsBroadcasting(true);
+    setShowBroadcastDialog(false);
+
     const messageTemplate = selectedTemplate 
       ? templates.find(t => t.id === selectedTemplate)?.content || ''
       : customMessage;
 
-    // Create confirmation dialog content
-    const confirmed = window.confirm(
-      `Are you sure you want to send this message to ALL ${students.length} students?\n\nThis action cannot be undone.`
-    );
+    let successCount = 0;
+    let failureCount = 0;
 
-    if (!confirmed) return;
-
-    students.forEach((student, index) => {
-      setTimeout(() => {
+    // Process students in batches to avoid overwhelming the system
+    for (let i = 0; i < students.length; i++) {
+      const student = students[i];
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 second delay between messages
         const formattedMessage = formatMessage(messageTemplate, student);
-        sendWhatsAppMessage(student, formattedMessage);
-      }, index * 1500); // 1.5 second delay between messages for all students
-    });
+        await sendWhatsAppMessage(student, formattedMessage);
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to send message to ${student.name}:`, error);
+        failureCount++;
+      }
+    }
 
+    setIsBroadcasting(false);
+    
     toast({
-      title: "Broadcasting to All Students",
-      description: `Sending message to all ${students.length} students`,
+      title: "Broadcast Complete",
+      description: `Message sent to ${successCount} students${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
+      variant: failureCount > 0 ? "destructive" : "default"
     });
   };
 
@@ -521,11 +536,11 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
 
             <Button 
               onClick={sendToAllStudents} 
-              variant="destructive" 
-              className="flex items-center gap-2 bg-gradient-to-r from-primary to-accent hover:from-primary-glow hover:to-accent text-primary-foreground font-bold shadow-2xl border-2 border-primary/50 hover:border-primary hover:scale-105 transition-all duration-300"
+              disabled={isBroadcasting || (!selectedTemplate && !customMessage)}
+              className="flex items-center gap-2 bg-gradient-to-r from-primary to-accent hover:from-primary-glow hover:to-accent text-primary-foreground font-bold shadow-2xl border-2 border-primary/50 hover:border-primary hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="h-4 w-4" />
-              Broadcast to All {students.length} Students
+              {isBroadcasting ? 'Broadcasting...' : `Broadcast to All ${students.length} Students`}
             </Button>
             
             <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
@@ -633,6 +648,52 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
           </div>
         </CardContent>
       </Card>
+
+      {/* Broadcast Confirmation Dialog */}
+      <Dialog open={showBroadcastDialog} onOpenChange={setShowBroadcastDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-center">Confirm Broadcast</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-center">
+              <p className="text-lg font-semibold text-primary">
+                Send to ALL {students.length} Students?
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                This action will send the message to every student in your database and cannot be undone.
+              </p>
+            </div>
+            
+            {/* Message Preview */}
+            <div className="p-3 bg-muted/50 rounded-lg border">
+              <p className="text-sm font-medium mb-2">Message Preview:</p>
+              <p className="text-sm italic">
+                {selectedTemplate 
+                  ? templates.find(t => t.id === selectedTemplate)?.content.slice(0, 150) + (templates.find(t => t.id === selectedTemplate)?.content.length > 150 ? '...' : '')
+                  : customMessage.slice(0, 150) + (customMessage.length > 150 ? '...' : '')
+                }
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowBroadcastDialog(false)}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmBroadcast}
+              className="w-full sm:w-auto bg-gradient-to-r from-primary to-accent hover:from-primary-glow hover:to-accent text-primary-foreground font-bold"
+            >
+              Yes, Send to All
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Message History */}
       <Card>
