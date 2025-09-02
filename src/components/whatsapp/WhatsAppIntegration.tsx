@@ -38,20 +38,70 @@ interface WhatsAppIntegrationProps {
 const DEFAULT_TEMPLATES: MessageTemplate[] = [
   {
     id: '1',
-    name: 'Fee Reminder',
-    content: 'Dear {name}, your monthly fee of ₹{monthlyFees} is due. Please ensure timely payment. - PATCH Library',
+    name: 'Professional Welcome Message',
+    content: `Dear {name},
+
+Welcome to PATCH - The Smart Library! We are delighted to have you as part of our learning community.
+
+Your enrollment details:
+• Enrollment No: {enrollmentNo}
+• Seat Number: {seatNumber}
+• Monthly Fee: ₹{monthlyFees}
+• Shift: {shift}
+
+Your membership has been successfully activated. Please feel free to explore our resources, attend upcoming sessions, and connect with our staff for any support. We look forward to your successful journey with us.
+
+Regards,
+PATCH Library Management`,
     createdAt: new Date().toISOString()
   },
   {
     id: '2',
-    name: 'Welcome Message',
-    content: 'Welcome to PATCH - The Smart Library, {name}! Your enrollment no. is {enrollmentNo}. We look forward to your learning journey.',
+    name: 'Professional Fee Reminder',
+    content: `Dear {name},
+
+This is a gentle reminder that your membership fee of ₹{monthlyFees} is due.
+
+Student Details:
+• Name: {name}
+• Enrollment No: {enrollmentNo}
+• Seat Number: {seatNumber}
+• Contact: {contact}
+
+Kindly complete the payment at your earliest convenience to continue enjoying uninterrupted access to our facilities and resources.
+
+Thank you for your cooperation and continued support.
+
+Regards,
+PATCH Library Management`,
     createdAt: new Date().toISOString()
   },
   {
     id: '3',
-    name: 'Payment Confirmation',
-    content: 'Dear {name}, we have received your payment of ₹{monthlyFees}. Thank you for choosing PATCH Library.',
+    name: 'Professional Payment Confirmation',
+    content: `Dear {name},
+
+We have successfully received your payment of ₹{monthlyFees} for your library membership.
+
+Payment Details:
+• Student Name: {name}
+• Enrollment No: {enrollmentNo}
+• Amount Paid: ₹{monthlyFees}
+• Payment Date: Today
+• Seat Number: {seatNumber}
+
+Thank you for your timely payment. Your subscription/membership remains active and you can continue accessing all our facilities without any interruption.
+
+We appreciate your support and commitment to your learning journey.
+
+Regards,
+PATCH Library Management`,
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: '4',
+    name: 'Quick Fee Reminder',
+    content: 'Dear {name}, your monthly fee of ₹{monthlyFees} is due. Please ensure timely payment. - PATCH Library',
     createdAt: new Date().toISOString()
   }
 ];
@@ -219,8 +269,51 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
     });
 
     toast({
-      title: "Bulk Messages",
+      title: "Bulk Messages Started",
       description: `Sending messages to ${targetStudents.length} students`,
+    });
+  };
+
+  const sendToAllStudents = () => {
+    if (!selectedTemplate && !customMessage) {
+      toast({
+        title: "Error",
+        description: "Please select a template or enter a custom message",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (students.length === 0) {
+      toast({
+        title: "Error",
+        description: "No students found to send messages to",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const messageTemplate = selectedTemplate 
+      ? templates.find(t => t.id === selectedTemplate)?.content || ''
+      : customMessage;
+
+    // Create confirmation dialog content
+    const confirmed = window.confirm(
+      `Are you sure you want to send this message to ALL ${students.length} students?\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    students.forEach((student, index) => {
+      setTimeout(() => {
+        const formattedMessage = formatMessage(messageTemplate, student);
+        sendWhatsAppMessage(student, formattedMessage);
+      }, index * 1500); // 1.5 second delay between messages for all students
+    });
+
+    toast({
+      title: "Broadcasting to All Students",
+      description: `Sending message to all ${students.length} students`,
     });
   };
 
@@ -424,6 +517,15 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
             <Button onClick={sendBulkMessages} className="flex items-center gap-2">
               <Send className="h-4 w-4" />
               Send to {selectedStudents.length > 0 ? `${selectedStudents.length} Selected` : 'All Students'}
+            </Button>
+
+            <Button 
+              onClick={sendToAllStudents} 
+              variant="destructive" 
+              className="flex items-center gap-2 bg-gradient-to-r from-primary to-accent hover:from-primary-glow hover:to-accent text-primary-foreground font-bold shadow-2xl border-2 border-primary/50 hover:border-primary hover:scale-105 transition-all duration-300"
+            >
+              <Send className="h-4 w-4" />
+              Broadcast to All {students.length} Students
             </Button>
             
             <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>

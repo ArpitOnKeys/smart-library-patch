@@ -181,11 +181,11 @@
 
   /* ULTRA PREMIUM LIQUID GLASS SYSTEM */
   .liquid-glass {
-    @apply backdrop-blur-3xl border rounded-3xl shadow-2xl;
+    @apply backdrop-blur-sm border rounded-3xl shadow-2xl;
     background: linear-gradient(
       135deg,
-      hsl(var(--card)) 0%,
-      hsl(var(--card))/60% 100%
+      hsl(var(--card))/95% 0%,
+      hsl(var(--card))/85% 100%
     );
     border: 1px solid hsl(var(--border));
     box-shadow: 
@@ -212,11 +212,11 @@
   }
 
   .liquid-glass-nav {
-    @apply backdrop-blur-3xl border-b;
+    @apply backdrop-blur-sm border-b;
     background: linear-gradient(
       180deg,
-      hsl(var(--card))/95% 0%,
-      hsl(var(--card))/80% 100%
+      hsl(var(--card))/98% 0%,
+      hsl(var(--card))/90% 100%
     );
     border-bottom: 1px solid hsl(var(--border));
     box-shadow: 
@@ -230,12 +230,12 @@
   }
 
   .liquid-glass-panel {
-    @apply backdrop-blur-3xl border rounded-3xl;
+    @apply backdrop-blur-sm border rounded-3xl;
     background: linear-gradient(
       145deg,
-      hsl(var(--card))/95% 0%,
-      hsl(var(--card))/70% 50%,
-      hsl(var(--card))/90% 100%
+      hsl(var(--card))/98% 0%,
+      hsl(var(--card))/85% 50%,
+      hsl(var(--card))/95% 100%
     );
     border: 1px solid hsl(var(--border));
     box-shadow: 
