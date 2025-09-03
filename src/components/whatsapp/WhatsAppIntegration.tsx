@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Receipt } from 'lucide-react';
+import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Receipt, StopCircle, Target } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { Student } from '@/types/database';
 import { generateFeeReceiptPDF, prepareReceiptData, sendReceiptViaWhatsApp as sendReceiptWhatsApp } from '@/utils/receiptGenerator';
 
@@ -118,6 +119,8 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [showBroadcastDialog, setShowBroadcastDialog] = useState(false);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [broadcastProgress, setBroadcastProgress] = useState({ current: 0, total: 0, success: 0, failed: 0 });
+  const [broadcastCanceled, setBroadcastCanceled] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -301,35 +304,84 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
   const confirmBroadcast = async () => {
     setIsBroadcasting(true);
     setShowBroadcastDialog(false);
+    setBroadcastCanceled(false);
+    setBroadcastProgress({ current: 0, total: students.length, success: 0, failed: 0 });
 
     const messageTemplate = selectedTemplate 
       ? templates.find(t => t.id === selectedTemplate)?.content || ''
       : customMessage;
 
+    const validStudents = students.filter(s => s.contact && s.contact.trim());
+    const invalidStudents = students.length - validStudents.length;
+
+    if (invalidStudents > 0) {
+      toast({
+        title: "Warning",
+        description: `${invalidStudents} students have invalid/missing phone numbers and will be skipped`,
+        variant: "destructive"
+      });
+    }
+
     let successCount = 0;
     let failureCount = 0;
 
-    // Process students in batches to avoid overwhelming the system
-    for (let i = 0; i < students.length; i++) {
-      const student = students[i];
+    // Process students one by one with progress tracking
+    for (let i = 0; i < validStudents.length; i++) {
+      if (broadcastCanceled) {
+        toast({
+          title: "Broadcast Canceled",
+          description: `Stopped after ${i} students. ${successCount} sent, ${failureCount} failed.`,
+          variant: "destructive"
+        });
+        break;
+      }
+
+      const student = validStudents[i];
+      
+      // Update progress
+      setBroadcastProgress(prev => ({ ...prev, current: i + 1 }));
+
       try {
-        await new Promise(resolve => setTimeout(resolve, 1500)); // 1.5 second delay between messages
+        // Add delay between messages to avoid flooding
+        if (i > 0) {
+          await new Promise(resolve => setTimeout(resolve, 2500)); // 2.5 second delay
+        }
+        
         const formattedMessage = formatMessage(messageTemplate, student);
         await sendWhatsAppMessage(student, formattedMessage);
         successCount++;
+        
+        setBroadcastProgress(prev => ({ ...prev, success: successCount }));
+        
+        // Show progress toast every 5 students
+        if ((i + 1) % 5 === 0) {
+          toast({
+            title: "Sending Progress",
+            description: `Sent ${i + 1} of ${validStudents.length} messages...`,
+          });
+        }
       } catch (error) {
         console.error(`Failed to send message to ${student.name}:`, error);
         failureCount++;
+        setBroadcastProgress(prev => ({ ...prev, failed: failureCount }));
       }
     }
 
     setIsBroadcasting(false);
+    setBroadcastProgress({ current: 0, total: 0, success: 0, failed: 0 });
     
+    // Final summary toast
+    const totalProcessed = successCount + failureCount;
     toast({
-      title: "Broadcast Complete",
-      description: `Message sent to ${successCount} students${failureCount > 0 ? `, ${failureCount} failed` : ''}`,
+      title: "✅ Broadcast Complete!",
+      description: `📊 Summary: ${totalProcessed} processed • ✅ ${successCount} sent successfully • ❌ ${failureCount} failed${invalidStudents > 0 ? ` • ⚠️ ${invalidStudents} skipped (invalid numbers)` : ''}`,
       variant: failureCount > 0 ? "destructive" : "default"
     });
+  };
+
+  const cancelBroadcast = () => {
+    setBroadcastCanceled(true);
+    setIsBroadcasting(false);
   };
 
   const addTemplate = () => {
@@ -584,6 +636,46 @@ export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleM
               </DialogContent>
             </Dialog>
           </div>
+
+          {/* Broadcast Progress Indicator */}
+          {isBroadcasting && (
+            <Card className="mt-4 border-primary/50 bg-gradient-to-r from-primary/5 to-accent/5">
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-primary animate-pulse" />
+                      <Label className="font-semibold text-primary">Broadcasting Messages</Label>
+                    </div>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={cancelBroadcast}
+                      className="flex items-center gap-2"
+                    >
+                      <StopCircle className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Progress: {broadcastProgress.current} of {broadcastProgress.total}</span>
+                      <span>✅ {broadcastProgress.success} sent • ❌ {broadcastProgress.failed} failed</span>
+                    </div>
+                    <Progress 
+                      value={(broadcastProgress.current / broadcastProgress.total) * 100} 
+                      className="w-full h-2" 
+                    />
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground">
+                    Sending messages with 2.5-second intervals to avoid flooding. Please wait...
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Sample Receipt Test Section */}
           <div className="mt-6 p-4 border rounded-lg bg-muted/50">
