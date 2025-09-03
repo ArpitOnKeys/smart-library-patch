@@ -108,6 +108,27 @@ const generateQRCodeDataURL = async (text: string): Promise<string> => {
 };
 
 export const generateFeeReceiptPDF = async (receiptData: ReceiptData): Promise<void> => {
+  // Validate required fields
+  const requiredFields = [
+    'slipNo', 'studentName', 'enrollmentNo', 'fatherName', 'contact', 
+    'address', 'aadharNumber', 'seatNumber', 'amount', 'month', 'year', 
+    'paymentDate', 'paymentMode'
+  ];
+  
+  const missingFields = requiredFields.filter(field => {
+    const value = receiptData[field as keyof ReceiptData];
+    return value === undefined || value === null || value === '';
+  });
+  
+  if (missingFields.length > 0) {
+    throw new Error(`Missing required fields for receipt generation: ${missingFields.join(', ')}`);
+  }
+  
+  // Validate that amount is a positive number
+  if (receiptData.amount <= 0) {
+    throw new Error('Receipt amount must be greater than 0');
+  }
+  
   const pdf = new jsPDF('p', 'mm', 'a4');
   
   // PDF dimensions
@@ -182,18 +203,52 @@ export const generateFeeReceiptPDF = async (receiptData: ReceiptData): Promise<v
   
   currentY += 15;
 
-  // Student photo placeholder (circular)
+  // Student photo (circular)
   const photoSize = 30;
   const photoX = cardX + cardWidth - 45;
   const photoY = currentY - 5;
   
-  pdf.setFillColor(...lightGray);
-  pdf.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'F');
+  // Draw circular border
   pdf.setDrawColor(...deepGray);
+  pdf.setLineWidth(0.5);
   pdf.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'S');
   
-  pdf.setFontSize(8);
-  pdf.text('PHOTO', photoX + photoSize/2, photoY + photoSize/2 + 2, { align: 'center' });
+  // Add student profile picture if available
+  if (receiptData.profilePicture) {
+    try {
+      // Create clipping path for circular image
+      pdf.saveGraphicsState();
+      pdf.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'W');
+      pdf.clip();
+      
+      // Add the profile picture
+      pdf.addImage(
+        receiptData.profilePicture, 
+        'JPEG', 
+        photoX, 
+        photoY, 
+        photoSize, 
+        photoSize
+      );
+      
+      pdf.restoreGraphicsState();
+    } catch (error) {
+      console.error('Error adding profile picture to receipt:', error);
+      // Fallback to placeholder if image fails
+      pdf.setFillColor(...lightGray);
+      pdf.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'F');
+      pdf.setFontSize(8);
+      pdf.setTextColor(...deepGray);
+      pdf.text('PHOTO', photoX + photoSize/2, photoY + photoSize/2 + 2, { align: 'center' });
+    }
+  } else {
+    // Default placeholder when no profile picture
+    pdf.setFillColor(...lightGray);
+    pdf.circle(photoX + photoSize/2, photoY + photoSize/2, photoSize/2, 'F');
+    pdf.setFontSize(8);
+    pdf.setTextColor(...deepGray);
+    pdf.text('PHOTO', photoX + photoSize/2, photoY + photoSize/2 + 2, { align: 'center' });
+  }
 
   // Student details (two columns)
   pdf.setFontSize(10);

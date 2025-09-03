@@ -149,7 +149,14 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
   };
 
   const generatePremiumPDFReceipt = async (payment: FeePayment) => {
-    if (!selectedStudent) return;
+    if (!selectedStudent) {
+      toast({
+        title: 'Error',
+        description: 'No student selected for receipt generation.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     try {
       const receiptData = prepareReceiptData(
@@ -167,16 +174,24 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
       });
     } catch (error) {
       console.error('Error generating PDF receipt:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to generate PDF receipt. Please try again.';
       toast({
-        title: 'Error',
-        description: 'Failed to generate PDF receipt. Please try again.',
+        title: 'Receipt Generation Error',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
   };
 
   const handleSendReceiptViaWhatsApp = async (payment: FeePayment) => {
-    if (!selectedStudent) return;
+    if (!selectedStudent) {
+      toast({
+        title: 'Error',
+        description: 'No student selected for WhatsApp receipt.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     try {
       const receiptData = prepareReceiptData(
@@ -194,9 +209,10 @@ export const FeeTracker = ({ refreshTrigger }: FeeTrackerProps) => {
       });
     } catch (error) {
       console.error('Error sending receipt via WhatsApp:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send receipt via WhatsApp. Please try again.';
       toast({
-        title: 'Error',
-        description: 'Failed to send receipt via WhatsApp. Please try again.',
+        title: 'WhatsApp Receipt Error',
+        description: errorMessage,
         variant: 'destructive',
       });
     }
