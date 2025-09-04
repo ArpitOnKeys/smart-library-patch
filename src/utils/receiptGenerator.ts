@@ -377,9 +377,22 @@ export const generateFeeReceiptPDF = async (receiptData: ReceiptData): Promise<v
   pdf.setFontSize(8);
   pdf.text('LIBRARY ADMINISTRATOR', cardX + cardWidth - 50, currentY + 12, { align: 'center' });
   
+  // Branding - Professional footer
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(7);
+  pdf.setTextColor(...deepGray);
+  pdf.text('⚡ Powered by Arpit', cardX + cardWidth - 10, currentY + 15, { align: 'right' });
+  
+  // Underline accent for branding
+  pdf.setDrawColor(...golden);
+  pdf.setLineWidth(0.3);
+  const brandingWidth = pdf.getTextWidth('⚡ Powered by Arpit');
+  pdf.line(cardX + cardWidth - 10 - brandingWidth, currentY + 16, cardX + cardWidth - 10, currentY + 16);
+
   // Thank you message
   pdf.setFont('helvetica', 'normal');
   pdf.setFontSize(8);
+  pdf.setTextColor(...deepGray);
   pdf.text('Thank you for choosing PATCH - The Smart Library', cardX + cardWidth / 2, currentY + 20, { align: 'center' });
 
   // Download the PDF
