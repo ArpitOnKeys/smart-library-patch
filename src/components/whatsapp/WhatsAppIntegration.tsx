@@ -12,6 +12,7 @@ import { MessageSquare, Send, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, R
 import { Progress } from '@/components/ui/progress';
 import { Student } from '@/types/database';
 import { generateFeeReceiptPDF, prepareReceiptData, sendReceiptViaWhatsApp as sendReceiptWhatsApp } from '@/utils/receiptGenerator';
+import { WhatsAppDesktopIntegration } from './WhatsAppDesktopIntegration';
 
 interface MessageTemplate {
   id: string;
@@ -108,6 +109,12 @@ PATCH Library Management`,
 ];
 
 export const WhatsAppIntegration = ({ students, selectedStudents = [], onSingleMessage }: WhatsAppIntegrationProps) => {
+  // Import the new enhanced integration component
+  return <WhatsAppDesktopIntegration students={students} />;
+};
+
+// Keep the legacy component for backward compatibility  
+export const LegacyWhatsAppIntegration = ({ students, selectedStudents = [], onSingleMessage }: WhatsAppIntegrationProps) => {
   const [templates, setTemplates] = useState<MessageTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [customMessage, setCustomMessage] = useState('');
