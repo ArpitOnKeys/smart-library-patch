@@ -76,6 +76,9 @@ import { useWhatsAppStore } from '@/store/whatsappStore';
 import { normalizeToE164, validatePhone } from '@/utils/phone';
 import { openDeepLink, addJitter, sleep, checkWhatsAppDesktopAvailability, sendEnterKey } from '@/utils/whatsappClient';
 import { logWhatsAppAttempt, downloadLogsAsCSV, getWhatsAppLogs } from '@/utils/logger';
+import { whatsappClient } from '@/utils/whatsappAutomation';
+import { MessageProgress, WhatsAppSession } from '@/types/whatsapp';
+import { WhatsAppQRDialog } from './WhatsAppQRDialog';
 
 interface WhatsAppDesktopIntegrationProps {
   students: Student[];
@@ -118,6 +121,14 @@ export const WhatsAppDesktopIntegration: React.FC<WhatsAppDesktopIntegrationProp
   const [characterCount, setCharacterCount] = useState(0);
   const [whatsAppAvailable, setWhatsAppAvailable] = useState<boolean | null>(null);
   const [isFullyAutomated, setIsFullyAutomated] = useState(false);
+  
+  // WhatsApp automation state
+  const [whatsappSession, setWhatsappSession] = useState<WhatsAppSession | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<MessageProgress | null>(null);
+  const [showQRCode, setShowQRCode] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>('');
+  const [automationMode, setAutomationMode] = useState(false);
+  const [attachReceipts, setAttachReceipts] = useState(false);
   
   // Update character count when message changes
   useEffect(() => {
@@ -825,6 +836,21 @@ export const WhatsAppDesktopIntegration: React.FC<WhatsAppDesktopIntegrationProp
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* WhatsApp QR Code Dialog - Placeholder for future automation */}
+      {showQRCode && (
+        <Dialog open={showQRCode} onOpenChange={setShowQRCode}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Connect WhatsApp</DialogTitle>
+            </DialogHeader>
+            <div className="text-center p-6">
+              <p>QR Code authentication would appear here for real WhatsApp automation.</p>
+              <p className="text-sm text-muted-foreground mt-2">Currently using deep-link method.</p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

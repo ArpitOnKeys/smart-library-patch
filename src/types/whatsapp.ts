@@ -96,3 +96,34 @@ export interface PersonalizationTokens {
   monthlyFees: string;
   seatNumber: string;
 }
+
+export interface BulkMessageRequest {
+  students: StudentMessage[];
+  message_template: string;
+  attach_receipt: boolean;
+  interval_seconds: number;
+}
+
+export interface StudentMessage {
+  student_id: string;
+  name: string;
+  phone: string;
+  receipt_path?: string;
+  personalization_tokens: Record<string, string>;
+}
+
+export interface MessageProgress {
+  student_id: string;
+  name: string;
+  phone: string;
+  status: SendStatus;
+  error?: string;
+  processed: number;
+  total: number;
+}
+
+export interface WhatsAppSession {
+  is_connected: boolean;
+  session_id?: string;
+  qr_code?: string;
+}

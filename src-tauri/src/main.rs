@@ -1,10 +1,14 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::command;
+use tauri::{command, Manager, State, Emitter};
 use std::process::Command;
 use std::thread;
 use std::time::Duration;
+use std::sync::Mutex;
+
+mod whatsapp;
+use whatsapp::{WhatsAppManager, BulkMessageRequest, WhatsAppSession};
 
 #[cfg(target_os = "windows")]
 use winapi::um::winuser::{keybd_event, VK_RETURN, KEYEVENTF_KEYUP};
@@ -266,12 +270,53 @@ async fn simulate_key_press(key: String) -> Result<String, String> {
     }
 }
 
+#[command]
+async fn initialize_whatsapp_session(
+    window: tauri::Window,
+    whatsapp_manager: State<'_, Mutex<WhatsAppManager>>
+) -> Result<WhatsAppSession, String> {
+    let mut manager = whatsapp_manager.lock().map_err(|e| e.to_string())?;
+    manager.initialize_session(&window).await
+}
+
+#[command]
+async fn send_bulk_whatsapp_messages(
+    request: BulkMessageRequest,
+    window: tauri::Window,
+    whatsapp_manager: State<'_, Mutex<WhatsAppManager>>
+) -> Result<(), String> {
+    let manager = whatsapp_manager.lock().map_err(|e| e.to_string())?;
+    manager.send_bulk_messages(request, &window).await
+}
+
+#[command]
+async fn disconnect_whatsapp_session(
+    whatsapp_manager: State<'_, Mutex<WhatsAppManager>>
+) -> Result<(), String> {
+    let mut manager = whatsapp_manager.lock().map_err(|e| e.to_string())?;
+    manager.disconnect();
+    Ok(())
+}
+
+#[command]
+async fn get_whatsapp_status(
+    whatsapp_manager: State<'_, Mutex<WhatsAppManager>>
+) -> Result<bool, String> {
+    let manager = whatsapp_manager.lock().map_err(|e| e.to_string())?;
+    Ok(manager.is_connected())
+}
+
 fn main() {
     tauri::Builder::default()
+        .manage(Mutex::new(WhatsAppManager::new()))
         .invoke_handler(tauri::generate_handler![
             check_whatsapp_desktop,
             open_whatsapp_and_send,
-            simulate_key_press
+            simulate_key_press,
+            initialize_whatsapp_session,
+            send_bulk_whatsapp_messages,
+            disconnect_whatsapp_session,
+            get_whatsapp_status
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
