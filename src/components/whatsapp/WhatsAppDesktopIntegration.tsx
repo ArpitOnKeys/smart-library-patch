@@ -74,7 +74,7 @@ import {
 } from '@/types/whatsapp';
 import { useWhatsAppStore } from '@/store/whatsappStore';
 import { normalizeToE164, validatePhone } from '@/utils/phone';
-import { openDeepLink, addJitter, sleep } from '@/utils/whatsappClient';
+import { openDeepLink, addJitter, sleep, checkWhatsAppDesktopAvailability, sendEnterKey } from '@/utils/whatsappClient';
 import { logWhatsAppAttempt, downloadLogsAsCSV, getWhatsAppLogs } from '@/utils/logger';
 
 interface WhatsAppDesktopIntegrationProps {
@@ -116,11 +116,23 @@ export const WhatsAppDesktopIntegration: React.FC<WhatsAppDesktopIntegrationProp
   const [testPhone, setTestPhone] = useState('');
   const [logs, setLogs] = useState(getWhatsAppLogs());
   const [characterCount, setCharacterCount] = useState(0);
+  const [whatsAppAvailable, setWhatsAppAvailable] = useState<boolean | null>(null);
+  const [isFullyAutomated, setIsFullyAutomated] = useState(false);
   
   // Update character count when message changes
   useEffect(() => {
     setCharacterCount(config.message.length);
   }, [config.message]);
+  
+  // Check WhatsApp availability on mount
+  useEffect(() => {
+    checkWhatsAppDesktopAvailability().then(available => {
+      setWhatsAppAvailable(available);
+      // If Tauri is available, we can do full automation
+      // @ts-ignore
+      setIsFullyAutomated(!!window.__TAURI__?.tauri);
+    });
+  }, []);
   
   // Refresh logs periodically
   useEffect(() => {
@@ -450,15 +462,85 @@ export const WhatsAppDesktopIntegration: React.FC<WhatsAppDesktopIntegrationProp
   
   return (
     <div className="space-y-6">
-      {/* Message Composer */}
+      {/* WhatsApp Status & Message Composer */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5" />
-            Custom Message Broadcast
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Custom Message Broadcast
+            </div>
+            {/* WhatsApp Status Indicator */}
+            <div className="flex items-center gap-2">
+              {whatsAppAvailable === null && (
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Checking...
+                </Badge>
+              )}
+              {whatsAppAvailable === true && (
+                <Badge variant="default" className="flex items-center gap-1 bg-green-600">
+                  <CheckCircle className="h-3 w-3" />
+                  WhatsApp Ready
+                </Badge>
+              )}
+              {whatsAppAvailable === false && (
+                <Badge variant="destructive" className="flex items-center gap-1">
+                  <XCircle className="h-3 w-3" />
+                  WhatsApp Not Found
+                </Badge>
+              )}
+              {isFullyAutomated && (
+                <Badge variant="secondary" className="flex items-center gap-1 bg-blue-600 text-white">
+                  <Settings className="h-3 w-3" />
+                  Full Auto
+                </Badge>
+              )}
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Automation Status Info */}
+          {whatsAppAvailable === false && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <span className="font-medium text-red-900">WhatsApp Desktop Required</span>
+              </div>
+              <p className="text-sm text-red-700">
+                Please install WhatsApp Desktop app to use bulk messaging. 
+                <a href="https://www.whatsapp.com/download" target="_blank" rel="noopener noreferrer" className="underline ml-1">
+                  Download here
+                </a>
+              </p>
+            </div>
+          )}
+          
+          {isFullyAutomated && whatsAppAvailable && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <CheckCircle className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-900">Full Automation Enabled</span>
+              </div>
+              <p className="text-sm text-blue-700">
+                Messages will be automatically sent without manual confirmation in WhatsApp. 
+                Each message will open and send automatically with a {config.interval}s delay.
+              </p>
+            </div>
+          )}
+          
+          {!isFullyAutomated && whatsAppAvailable && (
+            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-orange-600" />
+                <span className="font-medium text-orange-900">Manual Mode</span>
+              </div>
+              <p className="text-sm text-orange-700">
+                WhatsApp will open for each student, but you'll need to manually press Enter to send each message.
+              </p>
+            </div>
+          )}
+
           {/* Message Input */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">

@@ -1,9 +1,12 @@
 /**
  * WhatsApp Desktop Deep Link Client
- * Handles opening WhatsApp Desktop with fallbacks
+ * Handles opening WhatsApp Desktop with full automation via Tauri
  */
 
 import { formatForWhatsApp } from './phone';
+
+// @ts-ignore
+const { invoke } = window.__TAURI__?.tauri || { invoke: null };
 
 export interface SendResult {
   success: boolean;
@@ -12,18 +15,24 @@ export interface SendResult {
 }
 
 /**
- * Check if WhatsApp Desktop is likely available
- * Note: This is a best-effort check on web platforms
+ * Check if WhatsApp Desktop is available via Tauri command
  */
 export async function checkWhatsAppDesktopAvailability(): Promise<boolean> {
-  // On web, we can't reliably check if WhatsApp Desktop is installed
-  // We'll assume it might be available and let the fallbacks handle it
+  if (invoke) {
+    try {
+      return await invoke('check_whatsapp_desktop');
+    } catch (error) {
+      console.warn('Failed to check WhatsApp Desktop availability:', error);
+    }
+  }
+  
+  // Fallback for web version - assume available
   return true;
 }
 
 /**
- * Open WhatsApp Desktop with a message
- * Uses multiple fallback methods for maximum compatibility
+ * Open WhatsApp Desktop with automated sending via Tauri
+ * Uses Tauri backend for full automation including keyboard events
  */
 export async function openDeepLink(phoneE164: string, text: string): Promise<SendResult> {
   const phoneForLink = formatForWhatsApp(phoneE164);
@@ -34,10 +43,29 @@ export async function openDeepLink(phoneE164: string, text: string): Promise<Sen
       error: 'Invalid phone number format'
     };
   }
-  
+
+  // Try Tauri automated sending first (desktop app)
+  if (invoke) {
+    try {
+      const result = await invoke('open_whatsapp_and_send', {
+        phone: phoneForLink,
+        message: text
+      });
+      
+      console.log('WhatsApp message sent via Tauri automation');
+      return {
+        success: true,
+        method: 'Tauri Automated Sending'
+      };
+    } catch (error) {
+      console.warn('Tauri automated sending failed, falling back to manual methods:', error);
+      // Continue to fallback methods below
+    }
+  }
+
+  // Fallback methods for web version or if Tauri fails
   const encodedMessage = encodeURIComponent(text);
   
-  // Method definitions with fallbacks
   const methods = [
     {
       name: 'WhatsApp Desktop Protocol',
@@ -84,7 +112,7 @@ export async function openDeepLink(phoneE164: string, text: string): Promise<Sen
     }
   ];
   
-  // Try each method with error handling
+  // Try each fallback method
   for (const method of methods) {
     try {
       method.execute();
@@ -104,6 +132,31 @@ export async function openDeepLink(phoneE164: string, text: string): Promise<Sen
   return {
     success: false,
     error: 'All WhatsApp opening methods failed. Please ensure WhatsApp is installed.'
+  };
+}
+
+/**
+ * Send Enter key to WhatsApp (for manual fallback scenarios)
+ */
+export async function sendEnterKey(): Promise<SendResult> {
+  if (invoke) {
+    try {
+      await invoke('simulate_key_press', { key: 'Enter' });
+      return {
+        success: true,
+        method: 'Tauri Key Simulation'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Key simulation failed: ${error}`
+      };
+    }
+  }
+  
+  return {
+    success: false,
+    error: 'Key simulation not available in web version'
   };
 }
 

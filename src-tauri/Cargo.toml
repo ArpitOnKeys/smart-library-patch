@@ -1,0 +1,30 @@
+[package]
+name = "patch-smart-library"
+version = "1.0.0"
+description = "PATCH - THE SMART LIBRARY - A comprehensive library management system"
+authors = ["Arpit Upadhyay"]
+license = "MIT"
+repository = "https://github.com/arpitupadhyay/patch-smart-library"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+tauri = { version = "1.6", features = ["api-all", "shell-open", "dialog-open", "dialog-save", "fs-read-file", "fs-write-file", "fs-read-dir", "fs-copy-file", "fs-create-dir", "fs-remove-dir", "fs-remove-file", "fs-rename-file", "fs-exists", "path-all", "os-all"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+urlencoding = "2.1"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["winuser"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-graphics = "0.23"
+
+[features]
+# this feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]
