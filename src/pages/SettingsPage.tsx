@@ -13,6 +13,7 @@ import { Download, Upload, Trash2, Key, Shield, Database, Settings as SettingsIc
 import { AppLayout } from '@/components/layout/AppLayout';
 import { LiquidGlassCard } from '@/components/glass/LiquidGlassCard';
 import { motion } from 'framer-motion';
+import { verifyPassword, hashPassword, getPasswordStrength } from '@/utils/hash';
 
 const SettingsPage = () => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -33,6 +34,13 @@ const SettingsPage = () => {
     newPassword: { isValid: true, message: '' },
     confirmPassword: { isValid: true, message: '' }
   });
+
+  // Password strength state
+  const [passwordStrength, setPasswordStrength] = useState({ score: 0, feedback: [] as string[] });
+  
+  // Update throttling state
+  const [updateAttempts, setUpdateAttempts] = useState(0);
+  const [isThrottled, setIsThrottled] = useState(false);
 
   // Security question state
   const [securityQuestion, setSecurityQuestion] = useState(auth.getSecurityQuestion());
@@ -74,8 +82,8 @@ const SettingsPage = () => {
     if (!value.trim()) {
       return { isValid: false, message: 'Password is required' };
     }
-    if (value.length < 6) {
-      return { isValid: false, message: 'Password must be at least 6 characters' };
+    if (value.length < 8) {
+      return { isValid: false, message: 'Password must be at least 8 characters' };
     }
     if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
       return { isValid: false, message: 'Password must contain uppercase, lowercase, and number' };
@@ -109,6 +117,9 @@ const SettingsPage = () => {
       case 'newPassword':
         setNewPassword(value);
         validation = validatePassword(value);
+        // Update password strength
+        const strength = getPasswordStrength(value);
+        setPasswordStrength(strength);
         // Also re-validate confirm password if it has a value
         if (confirmPassword) {
           const confirmValidation = validateConfirmPassword(confirmPassword, value);
@@ -133,9 +144,19 @@ const SettingsPage = () => {
   };
 
   const handlePasswordChange = async () => {
+    // Check for throttling
+    if (isThrottled) {
+      toast({
+        title: "Too Many Attempts",
+        description: "Please wait 15 seconds before trying again",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate all fields
-    const currentPasswordValidation = validateCurrentPassword(currentPassword);
-    const usernameValidation = validateUsername(newUsername);
+    const currentPasswordValidation = validateCurrentPassword(currentPassword.trim());
+    const usernameValidation = validateUsername(newUsername.trim());
     const passwordValidation = validatePassword(newPassword);
     const confirmPasswordValidation = validateConfirmPassword(confirmPassword, newPassword);
 
@@ -164,30 +185,50 @@ const SettingsPage = () => {
         throw new Error('Admin not found');
       }
 
-      // Verify current password
-      if (atob(admin.passwordHash) !== currentPassword) {
+      // FIXED: Verify current password using proper hash verification 
+      // Previously used atob(admin.passwordHash) !== currentPassword which failed
+      // because admin.passwordHash is created with btoa(password + salt), not just btoa(password)
+      const isCurrentPasswordValid = verifyPassword(currentPassword.trim(), admin.passwordHash);
+      
+      if (!isCurrentPasswordValid) {
+        // Increment attempt counter and set throttling if needed
+        const newAttempts = updateAttempts + 1;
+        setUpdateAttempts(newAttempts);
+        
+        if (newAttempts >= 3) {
+          setIsThrottled(true);
+          setTimeout(() => {
+            setIsThrottled(false);
+            setUpdateAttempts(0);
+          }, 15000); // 15 second cooldown
+        }
+
         setValidations(prev => ({
           ...prev,
           currentPassword: { isValid: false, message: 'Current password is incorrect' }
         }));
         toast({
           title: "Authentication Error",
-          description: "Current password is incorrect",
+          description: "Current password is incorrect. Please try again.",
           variant: "destructive",
         });
         return;
       }
 
-      // Update admin credentials
+      // Update admin credentials with proper hashing
       const updatedAdmin: Admin = {
         ...admin,
-        username: newUsername,
-        passwordHash: btoa(newPassword),
+        username: newUsername.trim(),
+        passwordHash: hashPassword(newPassword),
         updatedAt: new Date().toISOString()
       };
 
       storage.setSingle(STORAGE_KEYS.ADMIN, updatedAdmin);
       setCurrentAdmin(updatedAdmin);
+
+      // Reset attempts on success
+      setUpdateAttempts(0);
+      setIsThrottled(false);
 
       toast({
         title: "Success! 🎉",
@@ -198,6 +239,7 @@ const SettingsPage = () => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
+      setPasswordStrength({ score: 0, feedback: [] });
       
       // Reset validation states
       setValidations({
@@ -473,8 +515,45 @@ const SettingsPage = () => {
                       {validations.newPassword.message}
                     </p>
                   )}
+                  
+                  {/* Password Strength Meter */}
+                  {newPassword && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-glass-muted">Password Strength</span>
+                        <span className={`font-medium ${
+                          passwordStrength.score === 0 ? 'text-destructive' :
+                          passwordStrength.score <= 2 ? 'text-orange-500' :
+                          passwordStrength.score === 3 ? 'text-yellow-500' :
+                          'text-primary'
+                        }`}>
+                          {passwordStrength.score === 0 ? 'Very Weak' :
+                           passwordStrength.score === 1 ? 'Weak' :
+                           passwordStrength.score === 2 ? 'Fair' :
+                           passwordStrength.score === 3 ? 'Good' : 'Strong'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-glass-muted/20 rounded-full h-2">
+                        <div 
+                          className={`h-2 rounded-full transition-all duration-300 ${
+                            passwordStrength.score === 0 ? 'w-1/5 bg-destructive' :
+                            passwordStrength.score === 1 ? 'w-2/5 bg-destructive' :
+                            passwordStrength.score === 2 ? 'w-3/5 bg-orange-500' :
+                            passwordStrength.score === 3 ? 'w-4/5 bg-yellow-500' :
+                            'w-full bg-primary'
+                          }`}
+                        />
+                      </div>
+                      {passwordStrength.feedback.length > 0 && (
+                        <div className="text-xs text-glass-muted">
+                          Suggestions: {passwordStrength.feedback.join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
                   <p className="text-xs text-glass-muted">
-                    Must contain uppercase, lowercase, number and be 6+ characters
+                    Must contain uppercase, lowercase, number and be 8+ characters
                   </p>
                 </div>
                 
@@ -519,29 +598,65 @@ const SettingsPage = () => {
                   )}
                 </div>
                 
+                {/* Throttling Warning */}
+                {updateAttempts > 0 && updateAttempts < 3 && (
+                  <div className="text-xs text-orange-500 font-medium">
+                    {3 - updateAttempts} attempt{3 - updateAttempts !== 1 ? 's' : ''} remaining before cooldown
+                  </div>
+                )}
+                
+                {isThrottled && (
+                  <div className="text-xs text-destructive font-medium">
+                    Too many failed attempts. Please wait 15 seconds before trying again.
+                  </div>
+                )}
+
                 {/* Submit Button */}
-                <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Button 
-                    onClick={handlePasswordChange}
-                    disabled={isLoading || Object.values(validations).some(v => !v.isValid)}
-                    className="w-full button-liquid text-lg font-semibold py-3 mt-6"
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Updating...</span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center space-x-2">
-                        <Key className="h-4 w-4" />
-                        <span>Update Credentials</span>
-                      </div>
-                    )}
-                  </Button>
-                </motion.div>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button 
+                        disabled={isLoading || isThrottled || Object.values(validations).some(v => !v.isValid) || 
+                                 !currentPassword || !newUsername || !newPassword || !confirmPassword}
+                        className="w-full button-liquid text-lg font-semibold py-3 mt-6"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <Key className="h-4 w-4" />
+                          <span>Update Credentials</span>
+                        </div>
+                      </Button>
+                    </motion.div>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Confirm Credential Update</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        You are about to update your admin credentials. This will change your username and password. 
+                        Make sure you remember your new credentials as you'll need them to log in again.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction 
+                        onClick={handlePasswordChange}
+                        disabled={isLoading}
+                        className="bg-primary hover:bg-primary/90"
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center space-x-2">
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            <span>Updating...</span>
+                          </div>
+                        ) : (
+                          "Update Credentials"
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardContent>
             </LiquidGlassCard>
           </motion.div>

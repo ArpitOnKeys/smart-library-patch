@@ -1,4 +1,5 @@
 import { Student, FeePayment, Expense, WhatsAppLog, Admin } from '@/types/database';
+import { verifyPassword, hashPassword } from '@/utils/hash';
 
 // Utility to generate unique IDs
 export const generateId = () => {
@@ -221,10 +222,21 @@ export const auth = {
     const admin = storage.getSingle<Admin>(STORAGE_KEYS.ADMIN);
     if (!admin) return false;
     
-    const isValid = admin.username === username && decrypt(admin.passwordHash) === password;
+    const isValid = admin.username === username && verifyPassword(password, admin.passwordHash);
     
     if (isValid) {
       storage.setSingle(STORAGE_KEYS.CURRENT_USER, { username, loginTime: new Date().toISOString() });
+      
+      // Migrate legacy password to bcrypt if needed
+      if (!admin.passwordHash.startsWith('$2')) {
+        const updatedAdmin: Admin = {
+          ...admin,
+          passwordHash: hashPassword(password, true),
+          updatedAt: new Date().toISOString()
+        };
+        storage.setSingle(STORAGE_KEYS.ADMIN, updatedAdmin);
+        console.log('Password migrated to bcrypt format for enhanced security');
+      }
     }
     
     return isValid;
@@ -262,7 +274,7 @@ export const auth = {
     const updatedAdmin: Admin = {
       ...admin,
       username: newUsername,
-      passwordHash: encrypt(newPassword),
+      passwordHash: hashPassword(newPassword, true), // Use bcrypt for new passwords
       updatedAt: new Date().toISOString()
     };
 
