@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +9,10 @@ import { auth, storage, STORAGE_KEYS } from '@/lib/database';
 import { Admin } from '@/types/database';
 import { exportData, importData } from '@/utils/backup';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Download, Upload, Trash2, Key, Shield, Database, Settings as SettingsIcon } from 'lucide-react';
+import { Download, Upload, Trash2, Key, Shield, Database, Settings as SettingsIcon, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { AppLayout } from '@/components/layout/AppLayout';
+import { LiquidGlassCard } from '@/components/glass/LiquidGlassCard';
+import { motion } from 'framer-motion';
 
 const SettingsPage = () => {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -18,34 +20,137 @@ const SettingsPage = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Password visibility states
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Validation states
+  const [validations, setValidations] = useState({
+    currentPassword: { isValid: true, message: '' },
+    newUsername: { isValid: true, message: '' },
+    newPassword: { isValid: true, message: '' },
+    confirmPassword: { isValid: true, message: '' }
+  });
 
   // Security question state
   const [securityQuestion, setSecurityQuestion] = useState(auth.getSecurityQuestion());
   const [securityAnswer, setSecurityAnswer] = useState('');
+  
+  // Get current admin data
+  const [currentAdmin, setCurrentAdmin] = useState<Admin | null>(null);
+  
+  useEffect(() => {
+    const admin = storage.getSingle<Admin>(STORAGE_KEYS.ADMIN);
+    setCurrentAdmin(admin);
+    if (admin) {
+      setNewUsername(admin.username);
+    }
+  }, []);
+
+  // Real-time validation functions
+  const validateCurrentPassword = (value: string) => {
+    if (!value.trim()) {
+      return { isValid: false, message: 'Current password is required' };
+    }
+    return { isValid: true, message: '' };
+  };
+
+  const validateUsername = (value: string) => {
+    if (!value.trim()) {
+      return { isValid: false, message: 'Username is required' };
+    }
+    if (value.length < 3) {
+      return { isValid: false, message: 'Username must be at least 3 characters' };
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(value)) {
+      return { isValid: false, message: 'Username can only contain letters, numbers, and underscores' };
+    }
+    return { isValid: true, message: '' };
+  };
+
+  const validatePassword = (value: string) => {
+    if (!value.trim()) {
+      return { isValid: false, message: 'Password is required' };
+    }
+    if (value.length < 6) {
+      return { isValid: false, message: 'Password must be at least 6 characters' };
+    }
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
+      return { isValid: false, message: 'Password must contain uppercase, lowercase, and number' };
+    }
+    return { isValid: true, message: '' };
+  };
+
+  const validateConfirmPassword = (value: string, newPassword: string) => {
+    if (!value.trim()) {
+      return { isValid: false, message: 'Please confirm your password' };
+    }
+    if (value !== newPassword) {
+      return { isValid: false, message: 'Passwords do not match' };
+    }
+    return { isValid: true, message: '' };
+  };
+
+  // Handle real-time validation
+  const handleFieldChange = (field: string, value: string) => {
+    let validation;
+    
+    switch (field) {
+      case 'currentPassword':
+        setCurrentPassword(value);
+        validation = validateCurrentPassword(value);
+        break;
+      case 'newUsername':
+        setNewUsername(value);
+        validation = validateUsername(value);
+        break;
+      case 'newPassword':
+        setNewPassword(value);
+        validation = validatePassword(value);
+        // Also re-validate confirm password if it has a value
+        if (confirmPassword) {
+          const confirmValidation = validateConfirmPassword(confirmPassword, value);
+          setValidations(prev => ({
+            ...prev,
+            confirmPassword: confirmValidation
+          }));
+        }
+        break;
+      case 'confirmPassword':
+        setConfirmPassword(value);
+        validation = validateConfirmPassword(value, newPassword);
+        break;
+      default:
+        return;
+    }
+
+    setValidations(prev => ({
+      ...prev,
+      [field]: validation
+    }));
+  };
 
   const handlePasswordChange = async () => {
-    if (!currentPassword || !newUsername || !newPassword || !confirmPassword) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Validate all fields
+    const currentPasswordValidation = validateCurrentPassword(currentPassword);
+    const usernameValidation = validateUsername(newUsername);
+    const passwordValidation = validatePassword(newPassword);
+    const confirmPasswordValidation = validateConfirmPassword(confirmPassword, newPassword);
 
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Error",
-        description: "New passwords do not match",
-        variant: "destructive",
-      });
-      return;
-    }
+    setValidations({
+      currentPassword: currentPasswordValidation,
+      newUsername: usernameValidation,
+      newPassword: passwordValidation,
+      confirmPassword: confirmPasswordValidation
+    });
 
-    if (newPassword.length < 6) {
+    if (!currentPasswordValidation.isValid || !usernameValidation.isValid || 
+        !passwordValidation.isValid || !confirmPasswordValidation.isValid) {
       toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long",
+        title: "Validation Error",
+        description: "Please fix the errors before proceeding",
         variant: "destructive",
       });
       return;
@@ -61,8 +166,12 @@ const SettingsPage = () => {
 
       // Verify current password
       if (atob(admin.passwordHash) !== currentPassword) {
+        setValidations(prev => ({
+          ...prev,
+          currentPassword: { isValid: false, message: 'Current password is incorrect' }
+        }));
         toast({
-          title: "Error",
+          title: "Authentication Error",
           description: "Current password is incorrect",
           variant: "destructive",
         });
@@ -78,6 +187,7 @@ const SettingsPage = () => {
       };
 
       storage.setSingle(STORAGE_KEYS.ADMIN, updatedAdmin);
+      setCurrentAdmin(updatedAdmin);
 
       toast({
         title: "Success! 🎉",
@@ -86,13 +196,21 @@ const SettingsPage = () => {
 
       // Clear form
       setCurrentPassword('');
-      setNewUsername('');
       setNewPassword('');
       setConfirmPassword('');
+      
+      // Reset validation states
+      setValidations({
+        currentPassword: { isValid: true, message: '' },
+        newUsername: { isValid: true, message: '' },
+        newPassword: { isValid: true, message: '' },
+        confirmPassword: { isValid: true, message: '' }
+      });
     } catch (error) {
+      console.error('Failed to update credentials:', error);
       toast({
         title: "Error",
-        description: "Failed to update credentials",
+        description: "Failed to update credentials. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -199,245 +317,424 @@ const SettingsPage = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto space-y-8 animate-fade-in">
+      <motion.div 
+        className="max-w-4xl mx-auto space-y-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center space-x-3">
-            <div className="brand-gradient p-3 rounded-2xl shadow-lg">
-              <SettingsIcon className="h-8 w-8 text-white" />
+        <motion.div 
+          className="text-center space-y-4"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.1, duration: 0.5 }}
+        >
+          <div className="flex items-center justify-center space-x-4">
+            <div className="brand-gradient p-4 rounded-2xl shadow-lg">
+              <SettingsIcon className="h-10 w-10 text-white" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              <h1 className="heading-glass text-5xl font-bold">
                 System Settings
               </h1>
-              <p className="text-muted-foreground text-lg">
+              <p className="text-glass-secondary text-xl font-medium">
                 Manage your PATCH library system configuration
               </p>
+              {currentAdmin && (
+                <p className="text-glass-muted text-sm mt-2">
+                  Logged in as: <span className="text-glass-primary font-semibold">{currentAdmin.username}</span>
+                </p>
+              )}
             </div>
           </div>
-        </div>
+        </motion.div>
 
         <div className="grid gap-8 md:grid-cols-2">
           {/* Admin Credentials */}
-          <Card className="card-enhanced">
-            <CardHeader className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="bg-blue-100 p-2 rounded-lg">
-                  <Key className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <CardTitle>Admin Credentials</CardTitle>
-                  <CardDescription>Update username and password</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="current-password">Current Password</Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  placeholder="Enter current password"
-                  className="rounded-xl"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="new-username">New Username</Label>
-                <Input
-                  id="new-username"
-                  type="text"
-                  value={newUsername}
-                  onChange={(e) => setNewUsername(e.target.value)}
-                  placeholder="Enter new username"
-                  className="rounded-xl"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="new-password">New Password</Label>
-                <Input
-                  id="new-password"
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password (min 6 chars)"
-                  className="rounded-xl"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">Confirm Password</Label>
-                <Input
-                  id="confirm-password"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirm new password"
-                  className="rounded-xl"
-                />
-              </div>
-              
-              <Button 
-                onClick={handlePasswordChange}
-                disabled={isLoading}
-                className="w-full rounded-xl button-enhanced"
-              >
-                {isLoading ? "Updating..." : "Update Credentials"}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Security */}
-          <Card className="card-enhanced">
-            <CardHeader className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="bg-green-100 p-2 rounded-lg">
-                  <Shield className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <CardTitle>Security</CardTitle>
-                  <CardDescription>Security question and data management</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Security Question Section */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="security-question">Security Question</Label>
-                  <Input
-                    id="security-question"
-                    value={securityQuestion}
-                    onChange={(e) => setSecurityQuestion(e.target.value)}
-                    placeholder="e.g., What is your favorite book?"
-                    className="rounded-xl"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="security-answer">Security Answer</Label>
-                  <Input
-                    id="security-answer"
-                    type="password"
-                    value={securityAnswer}
-                    onChange={(e) => setSecurityAnswer(e.target.value)}
-                    placeholder="Enter your answer"
-                    className="rounded-xl"
-                  />
-                </div>
-                
-                <Button 
-                  onClick={handleUpdateSecurityQuestion}
-                  variant="outline" 
-                  className="w-full rounded-xl button-enhanced"
-                >
-                  <Shield className="h-4 w-4 mr-2" />
-                  Update Security Question
-                </Button>
-                
-                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    💡 Your security question will be used for password recovery if you forget your credentials.
-                  </p>
-                </div>
-              </div>
-
-              {/* Divider */}
-              <div className="border-t pt-4">
-                <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide mb-4">Danger Zone</h4>
-                
-                {/* Clear Data Section */}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="w-full rounded-xl button-enhanced">
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Clear All Data
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent className="rounded-2xl">
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>⚠️ Clear All Data</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will permanently delete all students, fees, expenses, and logs. 
-                        This action cannot be undone. Are you sure?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-                      <AlertDialogAction 
-                        onClick={handleClearAllData}
-                        className="rounded-xl bg-destructive hover:bg-destructive/90"
-                      >
-                        Yes, Clear All Data
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Data Management */}
-          <Card className="card-enhanced md:col-span-2">
-            <CardHeader className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <div className="bg-purple-100 p-2 rounded-lg">
-                  <Database className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <CardTitle>Backup & Restore</CardTitle>
-                  <CardDescription>Export and import your library data</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-4">
-                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Export Data</h4>
-                  <Button 
-                    onClick={handleExportData}
-                    variant="outline"
-                    className="w-full rounded-xl button-enhanced"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download Backup (JSON)
-                  </Button>
-                  <p className="text-xs text-muted-foreground">
-                    Creates a backup file with all your data
-                  </p>
-                </div>
-                
-                <div className="space-y-4">
-                  <h4 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Import Data</h4>
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+          >
+            <LiquidGlassCard variant="panel" className="h-full">
+              <CardHeader className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="brand-gradient p-3 rounded-xl shadow-lg">
+                    <Key className="h-6 w-6 text-white" />
+                  </div>
                   <div>
-                    <input
-                      type="file"
-                      accept=".json"
-                      onChange={handleImportData}
-                      className="hidden"
-                      id="import-file"
+                    <CardTitle className="heading-glass text-2xl">Admin Credentials</CardTitle>
+                    <CardDescription className="text-glass-secondary font-medium">
+                      Update username and password securely
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Current Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="current-password" className="text-glass-primary font-semibold">
+                    Current Password *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="current-password"
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => handleFieldChange('currentPassword', e.target.value)}
+                      placeholder="Enter current password"
+                      className={`pr-12 transition-all duration-300 ${
+                        !validations.currentPassword.isValid ? 'border-destructive focus-visible:ring-destructive/50' : ''
+                      }`}
                     />
-                    <Button 
-                      variant="outline"
-                      className="w-full rounded-xl button-enhanced"
-                      onClick={() => document.getElementById('import-file')?.click()}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1 h-10 w-10 p-0 hover:bg-transparent"
+                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                     >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Backup (JSON)
+                      {showCurrentPassword ? (
+                        <EyeOff className="h-4 w-4 text-glass-muted" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-glass-muted" />
+                      )}
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Restore data from a backup file
+                  {!validations.currentPassword.isValid && (
+                    <p className="text-xs text-destructive font-medium">
+                      {validations.currentPassword.message}
+                    </p>
+                  )}
+                </div>
+                
+                {/* New Username */}
+                <div className="space-y-2">
+                  <Label htmlFor="new-username" className="text-glass-primary font-semibold">
+                    New Username *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="new-username"
+                      type="text"
+                      value={newUsername}
+                      onChange={(e) => handleFieldChange('newUsername', e.target.value)}
+                      placeholder="Enter new username"
+                      className={`transition-all duration-300 ${
+                        !validations.newUsername.isValid ? 'border-destructive focus-visible:ring-destructive/50' : 
+                        validations.newUsername.isValid && newUsername ? 'border-primary focus-visible:ring-primary/50' : ''
+                      }`}
+                    />
+                    {validations.newUsername.isValid && newUsername && (
+                      <CheckCircle className="absolute right-3 top-3 h-5 w-5 text-primary" />
+                    )}
+                  </div>
+                  {!validations.newUsername.isValid && (
+                    <p className="text-xs text-destructive font-medium">
+                      {validations.newUsername.message}
+                    </p>
+                  )}
+                </div>
+                
+                {/* New Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="new-password" className="text-glass-primary font-semibold">
+                    New Password *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => handleFieldChange('newPassword', e.target.value)}
+                      placeholder="Enter new password"
+                      className={`pr-12 transition-all duration-300 ${
+                        !validations.newPassword.isValid ? 'border-destructive focus-visible:ring-destructive/50' : 
+                        validations.newPassword.isValid && newPassword ? 'border-primary focus-visible:ring-primary/50' : ''
+                      }`}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1 h-10 w-10 p-0 hover:bg-transparent"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                    >
+                      {showNewPassword ? (
+                        <EyeOff className="h-4 w-4 text-glass-muted" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-glass-muted" />
+                      )}
+                    </Button>
+                  </div>
+                  {!validations.newPassword.isValid && (
+                    <p className="text-xs text-destructive font-medium">
+                      {validations.newPassword.message}
+                    </p>
+                  )}
+                  <p className="text-xs text-glass-muted">
+                    Must contain uppercase, lowercase, number and be 6+ characters
                   </p>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+                
+                {/* Confirm Password */}
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password" className="text-glass-primary font-semibold">
+                    Confirm Password *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
+                      placeholder="Confirm new password"
+                      className={`pr-12 transition-all duration-300 ${
+                        !validations.confirmPassword.isValid ? 'border-destructive focus-visible:ring-destructive/50' : 
+                        validations.confirmPassword.isValid && confirmPassword ? 'border-primary focus-visible:ring-primary/50' : ''
+                      }`}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1 h-10 w-10 p-0 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-glass-muted" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-glass-muted" />
+                      )}
+                    </Button>
+                    {validations.confirmPassword.isValid && confirmPassword && (
+                      <CheckCircle className="absolute right-12 top-3 h-5 w-5 text-primary" />
+                    )}
+                  </div>
+                  {!validations.confirmPassword.isValid && (
+                    <p className="text-xs text-destructive font-medium">
+                      {validations.confirmPassword.message}
+                    </p>
+                  )}
+                </div>
+                
+                {/* Submit Button */}
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button 
+                    onClick={handlePasswordChange}
+                    disabled={isLoading || Object.values(validations).some(v => !v.isValid)}
+                    className="w-full button-liquid text-lg font-semibold py-3 mt-6"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span>Updating...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-2">
+                        <Key className="h-4 w-4" />
+                        <span>Update Credentials</span>
+                      </div>
+                    )}
+                  </Button>
+                </motion.div>
+              </CardContent>
+            </LiquidGlassCard>
+          </motion.div>
+
+          {/* Security */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3, duration: 0.5 }}
+          >
+            <LiquidGlassCard variant="panel" className="h-full">
+              <CardHeader className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="brand-gradient p-3 rounded-xl shadow-lg">
+                    <Shield className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="heading-glass text-2xl">Security</CardTitle>
+                    <CardDescription className="text-glass-secondary font-medium">
+                      Security question and data management
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Security Question Section */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="security-question" className="text-glass-primary font-semibold">
+                      Security Question
+                    </Label>
+                    <Input
+                      id="security-question"
+                      value={securityQuestion}
+                      onChange={(e) => setSecurityQuestion(e.target.value)}
+                      placeholder="e.g., What is your favorite book?"
+                      className="transition-all duration-300"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="security-answer" className="text-glass-primary font-semibold">
+                      Security Answer
+                    </Label>
+                    <Input
+                      id="security-answer"
+                      type="password"
+                      value={securityAnswer}
+                      onChange={(e) => setSecurityAnswer(e.target.value)}
+                      placeholder="Enter your answer"
+                      className="transition-all duration-300"
+                    />
+                  </div>
+                  
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button 
+                      onClick={handleUpdateSecurityQuestion}
+                      variant="outline" 
+                      className="w-full font-semibold py-2.5"
+                    >
+                      <Shield className="h-4 w-4 mr-2" />
+                      Update Security Question
+                    </Button>
+                  </motion.div>
+                  
+                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
+                    <p className="text-sm text-glass-primary font-medium">
+                      💡 Your security question will be used for password recovery if you forget your credentials.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="border-t border-border/50 pt-6">
+                  <h4 className="font-bold text-sm text-destructive uppercase tracking-wide mb-4">Danger Zone</h4>
+                  
+                  {/* Clear Data Section */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button variant="destructive" className="w-full font-semibold py-2.5">
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Clear All Data
+                        </Button>
+                      </motion.div>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="liquid-glass-panel border border-border/30">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="heading-glass text-xl">⚠️ Clear All Data</AlertDialogTitle>
+                        <AlertDialogDescription className="text-glass-secondary font-medium">
+                          This will permanently delete all students, fees, expenses, and logs. 
+                          This action cannot be undone. Are you sure?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel className="font-semibold">Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleClearAllData}
+                          className="bg-destructive hover:bg-destructive/90 font-semibold"
+                        >
+                          Yes, Clear All Data
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </CardContent>
+            </LiquidGlassCard>
+          </motion.div>
+
+          {/* Data Management */}
+          <motion.div
+            className="md:col-span-2"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+          >
+            <LiquidGlassCard variant="panel">
+              <CardHeader className="space-y-4">
+                <div className="flex items-center space-x-4">
+                  <div className="brand-gradient p-3 rounded-xl shadow-lg">
+                    <Database className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="heading-glass text-2xl">Backup & Restore</CardTitle>
+                    <CardDescription className="text-glass-secondary font-medium">
+                      Export and import your library data securely
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4">
+                    <h4 className="font-bold text-sm text-glass-primary uppercase tracking-wide">Export Data</h4>
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Button 
+                        onClick={handleExportData}
+                        variant="outline"
+                        className="w-full font-semibold py-3"
+                      >
+                        <Download className="h-5 w-5 mr-2" />
+                        Download Backup (JSON)
+                      </Button>
+                    </motion.div>
+                    <p className="text-sm text-glass-muted font-medium">
+                      Creates a backup file with all your data including students, fees, and settings
+                    </p>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h4 className="font-bold text-sm text-glass-primary uppercase tracking-wide">Import Data</h4>
+                    <div>
+                      <input
+                        type="file"
+                        accept=".json"
+                        onChange={handleImportData}
+                        className="hidden"
+                        id="import-file"
+                      />
+                      <motion.div
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button 
+                          variant="outline"
+                          className="w-full font-semibold py-3"
+                          onClick={() => document.getElementById('import-file')?.click()}
+                        >
+                          <Upload className="h-5 w-5 mr-2" />
+                          Upload Backup (JSON)
+                        </Button>
+                      </motion.div>
+                    </div>
+                    <p className="text-sm text-glass-muted font-medium">
+                      Restore data from a backup file (this will overwrite existing data)
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </LiquidGlassCard>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </AppLayout>
   );
 };
